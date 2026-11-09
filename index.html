@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Step by step: numerical simulation</title>
+<style>
+:root{--bg:#fafaf7;--panel:#fff;--text:#1f1e1c;--muted:#6b6a65;--faint:#9a988f;--line:#e3e1da;--line2:#cfccc2;--accent:#534AB7;--accent-bg:#EEEDFE;--err:#A32D2D;--err-bg:#FCEBEB;--grid:#eeece6;--axis:#b9b6ac;--hover:#f1efe8}
+@media (prefers-color-scheme:dark){:root{--bg:#1b1b19;--panel:#242422;--text:#ecebe6;--muted:#a9a79f;--faint:#77756e;--line:#3a3936;--line2:#4a4945;--accent:#AFA9EC;--accent-bg:#2f2c55;--err:#F09595;--err-bg:#3d1c1c;--grid:#2e2e2b;--axis:#55534e;--hover:#2e2e2b}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+.wrap{max-width:1280px;margin:0 auto;padding:16px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+h1{font-size:18px;font-weight:500;margin:0;white-space:nowrap}
+.ttl{display:flex;align-items:center;gap:12px;flex:1;min-width:240px}
+.ttl input{max-width:320px;border-color:transparent;background:transparent;font-size:15px}
+.ttl input:hover{border-color:var(--line2)}
+.hact{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.note{display:none;align-items:center;gap:10px;flex-wrap:wrap;background:var(--accent-bg);color:var(--accent);border-radius:8px;padding:8px 12px;margin:-4px 0 12px;font-size:13px}
+.note.on{display:flex}
+.note.err{background:var(--err-bg);color:var(--err)}
+.note button{height:28px}
+body.dropping .wrap{outline:2px dashed var(--accent);outline-offset:-6px;border-radius:12px}
+.cols{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:16px;align-items:start}
+@media (max-width:920px){.cols{grid-template-columns:minmax(0,1fr)}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:14px}
+.sec{font-size:12px;color:var(--muted);margin:0 0 8px;display:flex;justify-content:space-between;align-items:center}
+input,select,button{font:inherit;color:var(--text)}
+input[type=text],input[type=number]{background:var(--panel);border:1px solid var(--line2);border-radius:6px;height:32px;padding:0 8px;width:100%;min-width:0}
+input.mono{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:13.5px}
+input:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px}
+input.bad{border-color:var(--err)}
+select{background:var(--panel);border:1px solid var(--line2);border-radius:6px;height:30px;padding:0 6px}
+button{background:transparent;border:1px solid var(--line2);border-radius:6px;height:32px;padding:0 12px;cursor:pointer}
+button:hover{background:var(--hover)}
+button.ghost{border-color:transparent;color:var(--muted);padding:0 6px;height:28px}
+button.ghost:hover{color:var(--text)}
+button.icon{width:26px;height:26px;padding:0;border-color:transparent;color:var(--faint);font-size:13px;line-height:1}
+button.icon:hover{color:var(--text)}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--panel)}
+.crow{display:grid;grid-template-columns:30px 90px 14px minmax(0,1fr) 26px;gap:6px;align-items:center;margin:4px 0}
+.qhead,.qrow{display:grid;grid-template-columns:30px 76px minmax(0,1.75fr) minmax(0,1.25fr) 26px;gap:6px;align-items:center}
+.qhead{font-size:12px;color:var(--faint);margin-bottom:2px}
+.qrow{margin:4px 0}
+.grip{height:32px;display:flex;align-items:center;justify-content:center;color:var(--faint);cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;font-size:16px;border-radius:6px}
+.grip:hover{color:var(--text);background:var(--hover)}
+.item{border-radius:8px}
+.item.dragging{background:var(--accent-bg);outline:1px solid var(--accent)}
+.item.dragging .grip{cursor:grabbing;color:var(--accent)}
+body.is-dragging{user-select:none;-webkit-user-select:none;cursor:grabbing}
+@media (pointer:coarse){.grip{font-size:20px}input[type=text],input[type=number],select{font-size:16px}}
+@media (max-width:520px){.qhead,.qrow{grid-template-columns:26px 54px minmax(0,1.7fr) minmax(0,1fr) 22px;gap:4px}.crow{grid-template-columns:26px 70px 12px minmax(0,1fr) 22px;gap:4px}.wrap{padding:10px}.card{padding:12px}}
+.rerr{font-size:12.5px;color:var(--err);margin:-1px 0 6px 36px}
+.rerr:empty{display:none}
+.syms{display:flex;flex-wrap:wrap;gap:4px;margin-top:10px}
+.syms button{height:28px;min-width:32px;padding:0 8px;font-family:ui-monospace,Menlo,monospace}
+.ctrl{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.status{font-size:13px;color:var(--muted);margin-top:10px;font-variant-numeric:tabular-nums}
+.banner{background:var(--err-bg);color:var(--err);border-radius:8px;padding:8px 12px;font-size:13px;margin-top:10px}
+.banner:empty{display:none}
+.phead{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px;font-size:13px;color:var(--muted)}
+.sw{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:2px}
+.ser{display:inline-flex;align-items:center;gap:3px}
+.sp{flex:1}
+canvas{display:block;width:100%;touch-action:none;cursor:crosshair}
+.bar{position:sticky;top:0;z-index:20;background:var(--bg);margin:0 -16px 14px;padding:10px 16px;border-bottom:1px solid var(--line)}
+.bar .ctrl{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.bar #scrub{flex:1;min-width:140px}
+.bar .status{margin:0;min-width:150px}
+.opts{display:flex;gap:10px;align-items:center;font-size:13px;color:var(--muted)}
+.opts{flex-wrap:wrap}
+.spd input{width:120px}
+.spdout{min-width:64px;font-variant-numeric:tabular-nums}
+.opts label{display:flex;align-items:center;gap:6px;white-space:nowrap}
+.bar .banner{margin-top:8px}
+.cwrap{position:relative}
+.cwrap canvas{position:absolute;inset:0;width:100%;height:100%}
+.card.max{position:fixed;left:0;right:0;bottom:0;top:var(--barH,60px);z-index:15;margin:0;border-radius:0;display:flex;flex-direction:column}
+.card.max .cwrap{flex:1;min-height:0;height:auto!important}
+body.has-max{overflow:hidden}
+input[type=range]{accent-color:var(--accent)}
+@media (max-width:700px){.bar{margin:0 -10px 12px;padding:8px 10px}.bar .ctrl{gap:6px 6px}.bar button{padding:0 10px}.bar #scrub{order:2;flex-basis:100%;margin:2px 0}.bar .status{order:3;min-width:0;font-size:12px}.opts{order:4;margin-left:auto;gap:6px;font-size:12px}.opts input{width:62px!important;height:30px}.lspeed{display:none}.spd input{width:90px}.spdout{min-width:0}#cond{width:96px!important}#runN{width:58px!important}}
+
+table{width:100%;border-collapse:collapse;font-family:ui-monospace,Menlo,monospace;font-size:12.5px;font-variant-numeric:tabular-nums}
+th,td{padding:3px 8px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+thead th{position:sticky;top:0;background:var(--panel);z-index:1}
+tbody tr[data-k]{cursor:pointer}
+tbody tr[data-k]:hover td{background:var(--hover)}
+tr.pad td{padding:0;border:0}
+th{color:var(--muted);font-weight:400}
+tr.cur td{background:var(--accent-bg);color:var(--accent)}
+.tscroll{overflow:auto;max-height:340px;overscroll-behavior:contain}
+textarea{width:100%;height:120px;font-family:ui-monospace,Menlo,monospace;font-size:12px;background:var(--panel);color:var(--text);border:1px solid var(--line2);border-radius:6px;margin-top:8px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="ttl"><h1>Step by step</h1><input type="text" id="title" placeholder="Untitled model" spellcheck="false" autocomplete="off" aria-label="Model name"></div>
+  <div class="hact">
+  <button id="bOpen">Open</button><button id="bSave">Save</button>
+  <input type="file" id="fileIn" accept=".json,application/json,.txt" hidden>
+  <label style="font-size:13px;color:var(--muted)">Example
+    <select id="example">
+      <option value="custom" hidden>Your model</option>
+      <option value="blank">Blank</option>
+      <option value="spring">Spring with friction</option>
+      <option value="projectile">Projectile with air drag</option>
+      <option value="two">Two masses, three springs</option>
+    </select>
+  </label>
+  </div>
+</header>
+<div class="note" id="note"></div>
+<div class="bar" id="bar">
+  <div class="ctrl">
+    <button id="bStep">Step</button>
+    <button id="bRun" class="primary">Run</button>
+    <button id="bReplay">Replay</button>
+    <button id="bReset">Reset</button>
+    <input type="range" id="scrub" min="0" max="0" value="0" step="1" aria-label="Current step">
+    <span class="status" id="status"></span>
+    <span class="opts">
+      <label>Stop after <input type="number" id="runN" min="0" step="any" style="width:72px">
+        <select id="runUnit"><option value="steps">steps</option><option value="time">s</option></select></label>
+      <label>while <input type="text" id="cond" class="mono" placeholder="always" spellcheck="false" autocomplete="off" style="width:120px"></label>
+      <label class="spd"><span class="lspeed">Speed</span>
+        <input type="range" id="speed" min="0" max="100" step="1" value="49" aria-label="Run speed">
+        <span id="speedOut" class="spdout"></span>
+      </label>
+      <label title="One second on screen is one second of simulated time"><input type="checkbox" id="realTime">Real time</label>
+    </span>
+  </div>
+  <div class="banner" id="banner"></div>
+</div>
+<div class="cols">
+<div>
+  <div class="card">
+    <p class="sec"><span>Constants</span></p>
+    <div id="consts"></div>
+    <button class="ghost" id="addC">+ Constant</button>
+  </div>
+  <div class="card">
+    <p class="sec"><span>Quantities, calculated top to bottom in every step</span></p>
+    <div class="qhead"><span></span><span>Name</span><span>Each step</span><span>Start</span><span></span></div>
+    <div id="qs"></div>
+    <button class="ghost" id="addQ">+ Quantity</button>
+    <div class="syms" id="syms"></div>
+  </div>
+</div>
+<div>
+  <div id="plots"></div>
+  <div style="display:flex;gap:8px;margin:-4px 0 14px">
+    <button class="ghost" id="addG">+ Graph</button>
+    <button class="ghost" id="addT">+ 1D track</button>
+  </div>
+  <div class="card">
+    <p class="sec"><span>Data</span><button class="ghost" id="bCsv">Copy for Excel</button></p>
+    <div class="tscroll" id="tscroll"><table id="tbl"></table></div>
+    <div id="csvBox"></div>
+  </div>
+</div>
+</div>
+</div>
+<script>
+"use strict";
+const $=id=>document.getElementById(id);
+
+/* ---------- formula parser ---------- */
+const FN={sin:Math.sin,cos:Math.cos,tan:Math.tan,asin:Math.asin,acos:Math.acos,atan:Math.atan,sqrt:Math.sqrt,abs:Math.abs,sign:Math.sign,exp:Math.exp,ln:Math.log,log:Math.log10};
+const BUILTIN={'π':Math.PI,pi:Math.PI};
+const NAME_RE=/^[\p{L}_][\p{L}\p{N}_]*$/u;
+class UErr extends Error{}
+function normalize(s){return s.replace(/≥/g,'>=').replace(/≤/g,'<=').replace(/≠/g,'!=').replace(/&&/g,' and ').replace(/[·×∙⋅]/g,'*').replace(/[−–—]/g,'-').replace(/÷/g,'/').replace(/²/g,'^2').replace(/³/g,'^3').replace(/½/g,'(1/2)').replace(/,/g,'.');}
+function tokenize(s){
+  const out=[];let i=0;
+  while(i<s.length){
+    const c=s[i];
+    if(/\s/.test(c)){i++;continue;}
+    const rest=s.slice(i);let m;
+    if((m=/^(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?/.exec(rest))){out.push({t:'num',v:parseFloat(m[0])});i+=m[0].length;continue;}
+    if((m=/^[\p{L}_][\p{L}\p{N}_]*/u.exec(rest))){out.push({t:'name',v:m[0]});i+=m[0].length;continue;}
+    if((m=/^(>=|<=|==|!=|<|>|=)/.exec(rest))){out.push({t:'op',v:m[0]==='='?'==':m[0],cmp:true});i+=m[0].length;continue;}
+    if('+-*/^()√|'.includes(c)){out.push({t:'op',v:c});i++;continue;}
+    throw new UErr(`"${c}" isn't something the formula can contain.`);
+  }
+  return out;
+}
+function splitName(n,known){
+  for(let i=1;i<n.length;i++){
+    const a=n.slice(0,i),b=n.slice(i);
+    if(known.has(a)||a in BUILTIN){
+      if(known.has(b)||b in BUILTIN)return [a,b];
+      const r=splitName(b,known);if(r)return [a,...r];
+    }
+  }
+  return null;
+}
+function compileExpr(src,known,cond){
+  const toks=tokenize(normalize(src));
+  const refs=new Set();let p=0,bars=0;
+  const peek=()=>toks[p];
+  const isOp=(t,v)=>t&&t.t==='op'&&t.v===v;
+  function expr(){
+    let a=term();
+    while(isOp(peek(),'+')||isOp(peek(),'-')){
+      const op=toks[p++].v;const b=term();const A=a;
+      a=op==='+'?e=>A(e)+b(e):e=>A(e)-b(e);
+    }
+    return a;
+  }
+  function term(){
+    let a=unary();
+    for(;;){
+      const t=peek();if(!t)break;
+      if(isOp(t,'*')||isOp(t,'/')){p++;const b=unary();const A=a;a=t.v==='*'?e=>A(e)*b(e):e=>A(e)/b(e);}
+      else if(cond&&t.t==='name'&&(t.v==='and'||t.v==='or'))break;
+      else if(t.t==='num'||t.t==='name'||isOp(t,'(')||isOp(t,'√')||(isOp(t,'|')&&bars===0)){const b=power();const A=a;a=e=>A(e)*b(e);}
+      else break;
+    }
+    return a;
+  }
+  const isWord=(t,w)=>t&&t.t==='name'&&t.v===w;
+  function top(){return cond?orE():expr();}
+  function orE(){let a=andE();while(isWord(peek(),'or')){p++;const b=andE();const A=a;a=e=>(A(e)||b(e))?1:0;}return a;}
+  function andE(){let a=cmpE();while(isWord(peek(),'and')){p++;const b=cmpE();const A=a;a=e=>(A(e)&&b(e))?1:0;}return a;}
+  function cmpE(){
+    const a=expr();const t=peek();
+    if(!(t&&t.cmp))return a;
+    p++;const b=expr();
+    const f={'>':(x,y)=>x>y,'<':(x,y)=>x<y,'>=':(x,y)=>x>=y,'<=':(x,y)=>x<=y,'==':(x,y)=>Math.abs(x-y)<=1e-9*Math.max(1,Math.abs(x),Math.abs(y)),'!=':(x,y)=>x!==y}[t.v];
+    return e=>f(a(e),b(e))?1:0;
+  }
+  function unary(){
+    const t=peek();
+    if(isOp(t,'-')){p++;const a=unary();return e=>-a(e);}
+    if(isOp(t,'+')){p++;return unary();}
+    return power();
+  }
+  function power(){
+    const base=primary();
+    if(isOp(peek(),'^')){p++;const ex=unary();return e=>Math.pow(base(e),ex(e));}
+    return base;
+  }
+  function closeBracket(){
+    const c=toks[p++];
+    if(!isOp(c,')'))throw new UErr('A bracket is opened but never closed.');
+  }
+  function primary(){
+    const t=toks[p++];
+    if(!t)throw new UErr('The formula ends too early. Something is missing at the end.');
+    if(t.t==='num'){const v=t.v;return ()=>v;}
+    if(isOp(t,'(')){const a=top();closeBracket();return a;}
+    if(isOp(t,'√')){const a=power();return e=>Math.sqrt(a(e));}
+    if(isOp(t,'|')){
+      bars++;const a=top();bars--;
+      if(!isOp(toks[p],'|'))throw new UErr('An absolute value | is opened but never closed.');
+      p++;return e=>Math.abs(a(e));
+    }
+    if(t.t==='name'){
+      const n=t.v;
+      if(FN[n]){
+        if(!isOp(toks[p],'('))throw new UErr(`${n} needs brackets, like ${n}(x).`);
+        p++;const a=expr();closeBracket();const f=FN[n];return e=>f(a(e));
+      }
+      if(known.has(n)){refs.add(n);return e=>e[n];}
+      if(n in BUILTIN){const v=BUILTIN[n];return ()=>v;}
+      const sp=splitName(n,known);
+      if(sp)throw new UErr(`"${n}" isn't defined. Did you mean ${sp.join('·')}?`);
+      throw new UErr(`"${n}" isn't defined. Add it as a constant or a quantity.`);
+    }
+    if(isOp(t,')'))throw new UErr('There is a closing bracket without an opening one.');
+    if(isOp(t,'|'))throw new UErr('Something is missing between the | bars.');
+    throw new UErr(`Something is missing before "${t.v}".`);
+  }
+  if(!toks.length)return null;
+  const f=top();
+  if(p<toks.length){
+    const t=toks[p];
+    if(t.cmp&&!cond)throw new UErr('Comparisons like > or ≥ belong only in the "while" condition of the run.');
+    if(t.cmp)throw new UErr('Only one comparison at a time. Join conditions with "and" or "or".');
+    if(isOp(t,')'))throw new UErr('There is a closing bracket without an opening one.');
+    throw new UErr(`Something is missing before "${t.v}".`);
+  }
+  return {f,refs};
+}
+
+/* ---------- examples ---------- */
+const EXAMPLES={
+  blank:{consts:[{n:'Δt',v:'0.1'}],qs:[{n:'t',s:'0',r:'t + Δt'}],runN:100,runUnit:'steps',cond:'',plots:[{kind:'graph',x:'t',ys:['t'],marker:true}]},
+  spring:{consts:[{n:'m',v:'1'},{n:'k',v:'4'},{n:'b',v:'0.3'},{n:'Δt',v:'0.1'}],
+    qs:[{n:'t',s:'0',r:'t + Δt'},{n:'ΣF',s:'',r:'−k·x − b·v'},{n:'a',s:'',r:'ΣF / m'},{n:'v',s:'0',r:'v + a·Δt'},{n:'x',s:'1',r:'x + v·Δt'},{n:'E',s:'',r:'½·m·v² + ½·k·x²'}],
+    runN:20,runUnit:'time',cond:'',plots:[{kind:'graph',x:'t',ys:['x'],marker:true},{kind:'track',ys:['x'],marker:true},{kind:'graph',x:'t',ys:['E'],marker:true}]},
+  projectile:{consts:[{n:'g',v:'9.8'},{n:'m',v:'0.5'},{n:'c',v:'0.01'},{n:'v0',v:'25'},{n:'θ',v:'45'},{n:'Δt',v:'0.02'}],
+    qs:[{n:'t',s:'0',r:'t + Δt'},{n:'speed',s:'',r:'√(vx² + vy²)'},{n:'Fx',s:'',r:'−c·speed·vx'},{n:'Fy',s:'',r:'−m·g − c·speed·vy'},
+        {n:'vx',s:'v0·cos(θ·π/180)',r:'vx + Fx/m·Δt'},{n:'vy',s:'v0·sin(θ·π/180)',r:'vy + Fy/m·Δt'},{n:'x',s:'0',r:'x + vx·Δt'},{n:'y',s:'0',r:'y + vy·Δt'}],
+    runN:10,runUnit:'time',cond:'y ≥ 0',plots:[{kind:'graph',x:'x',ys:['y'],marker:true},{kind:'graph',x:'t',ys:['vx','vy'],marker:true}]},
+  two:{consts:[{n:'m',v:'1'},{n:'k',v:'10'},{n:'Δt',v:'0.02'}],
+    qs:[{n:'t',s:'0',r:'t + Δt'},{n:'F1',s:'',r:'−k·x1 + k·(x2 − x1)'},{n:'F2',s:'',r:'−k·(x2 − x1) − k·x2'},{n:'v1',s:'0',r:'v1 + F1/m·Δt'},{n:'v2',s:'0',r:'v2 + F2/m·Δt'},
+        {n:'x1',s:'0.5',r:'x1 + v1·Δt'},{n:'x2',s:'0',r:'x2 + v2·Δt'},{n:'p1',s:'',r:'x1 − 1'},{n:'p2',s:'',r:'x2 + 1'}],
+    runN:16,runUnit:'time',cond:'',plots:[{kind:'graph',x:'t',ys:['x1','x2'],marker:true},{kind:'track',ys:['p1','p2'],marker:true}]}
+};
+
+/* ---------- state ---------- */
+let model,plots;
+let comp=null,rows=[],scrub=0,follow=true,runtimeErr='';
+let running=false,replaying=false,lastFocus=null,reached=0;
+
+function clone(o){return JSON.parse(JSON.stringify(o));}
+const EX_TITLES={blank:'',spring:'Spring with friction',projectile:'Projectile with air drag',two:'Two masses, three springs'};
+function loadExample(key){
+  const ex=clone(EXAMPLES[key]);
+  applyModel({title:EX_TITLES[key]||'',consts:ex.consts,qs:ex.qs,runN:ex.runN,runUnit:ex.runUnit,cond:ex.cond},ex.plots);
+  $('example').value=key;
+}
+function applyModel(m,pl){
+  model=m;
+  plots=pl.map(p=>({kind:p.kind,x:p.x||'t',ys:p.ys,marker:p.marker!==false,view:null}));
+  $('title').value=model.title||'';
+  dirty=false;stopNote='';follow=true;
+  renderModel();renderPlots();
+  rebuild(0);
+}
+let dirty=false;
+function markDirty(){dirty=true;$('example').value='custom';}
+function showNote(html,cls){const n=$('note');n.className='note on'+(cls?' '+cls:'');n.innerHTML='';if(typeof html==='string')n.textContent=html;else n.append(...html);}
+function hideNote(){$('note').className='note';}
+function guard(what,action){
+  if(!dirty){action();return;}
+  const t=document.createElement('span');t.textContent=`Your current model has unsaved changes. Replace it with ${what}?`;
+  const yes=mkBtn('Replace','', '',()=>{hideNote();action();});
+  const sv=mkBtn('Save first','','',async()=>{if(await saveFile())action();hideNote();});
+  const no=mkBtn('Cancel','ghost','',()=>hideNote());
+  showNote([t,sv,yes,no]);
+}
+function plotSpec(){return plots.map(p=>({kind:p.kind,x:p.x,ys:p.ys,marker:p.marker}));}
+function save(){try{localStorage.setItem('stepper-v1',JSON.stringify({model,plots:plotSpec(),dirty}));}catch(e){}}
+function restore(){
+  try{const s=JSON.parse(localStorage.getItem('stepper-v1'));if(s&&s.model&&s.plots){const m=cleanModel(s);applyModel(m.model,m.plots);dirty=!!s.dirty;$('example').value='custom';return true;}}catch(e){}
+  return false;
+}
+
+/* ---------- compile model ---------- */
+function compileModel(){
+  const errs={};const C={};const consts=new Set();const all=new Set();
+  const seen=new Map();
+  const checkName=(n,key)=>{
+    if(!n){errs[key]=errs[key]||'Give it a name.';return false;}
+    if(!NAME_RE.test(n)){errs[key]=errs[key]||`"${n}" can't be a name. Use letters, digits and _, starting with a letter.`;return false;}
+    if(FN[n]||n in BUILTIN){errs[key]=errs[key]||`"${n}" is already taken by a built-in function.`;return false;}
+    if(seen.has(n)){errs[key]=errs[key]||`"${n}" is used twice.`;return false;}
+    seen.set(n,key);return true;
+  };
+  model.consts.forEach((c,i)=>{const n=c.n.trim();if(checkName(n,'c'+i)){all.add(n);}});
+  model.qs.forEach((q,i)=>{const n=q.n.trim();if(checkName(n,'q'+i))all.add(n);});
+  model.consts.forEach((c,i)=>{
+    const key='c'+i,n=c.n.trim();
+    if(errs[key])return;
+    try{
+      const ex=compileExpr(c.v,consts);
+      if(!ex)throw new UErr('Give it a value.');
+      const v=ex.f(C);
+      if(!Number.isFinite(v))throw new UErr('This value comes out undefined.');
+      C[n]=v;consts.add(n);
+    }catch(e){
+      if(!(e instanceof UErr))throw e;
+      let msg=e.message;
+      const m=/^"(.+)" isn't defined/.exec(msg);
+      if(m&&all.has(m[1]))msg=`A constant can only use constants listed above it, and "${m[1]}" isn't one.`;
+      errs[key]=msg;
+    }
+  });
+  const qs=[];
+  model.qs.forEach((q,i)=>{
+    const key='q'+i,n=q.n.trim();
+    const item={n,start:null,rule:null,ok:!errs[key]};
+    if(!errs[key]){
+      try{item.start=compileExpr(q.s,all);}catch(e){if(!(e instanceof UErr))throw e;errs[key]='Start: '+e.message;item.ok=false;}
+      if(item.ok){try{item.rule=compileExpr(q.r,all);}catch(e){if(!(e instanceof UErr))throw e;errs[key]='Each step: '+e.message;item.ok=false;}}
+      if(item.ok&&!item.start&&!item.rule){errs[key]='Give it a start value, a rule for each step, or both.';item.ok=false;}
+    }
+    qs.push(item);
+  });
+  const env=Object.assign({},C);
+  if(!Object.keys(errs).length){
+    for(let i=0;i<qs.length;i++){
+      const q=qs[i];if(!q.start)continue;
+      for(const r of q.start.refs){
+        if(!(r in env)){errs['q'+i]=`Start: "${r}" has no start value at this point. Only constants, and quantities above with a start value, can be used here.`;break;}
+      }
+      if(errs['q'+i])continue;
+      const v=q.start.f(env);
+      if(!Number.isFinite(v)){errs['q'+i]='Start: this value comes out undefined.';continue;}
+      env[q.n]=v;
+    }
+    for(let i=0;i<qs.length;i++){
+      const q=qs[i];if(q.start||errs['q'+i])continue;
+      for(const r of q.rule.refs){
+        if(r in env)continue;
+        errs['q'+i]=r===q.n
+          ?`"${q.n}" has no start value, but its rule uses the previous value of ${q.n}. Give it a start value.`
+          :`At the start, "${r}" has no value yet. Give ${r} a start value, or move ${q.n} below ${r}.`;
+        break;
+      }
+      if(errs['q'+i])continue;
+      const v=q.rule.f(env);
+      if(!Number.isFinite(v)){errs['q'+i]='At the start this comes out undefined (dividing by zero?).';continue;}
+      env[q.n]=v;
+    }
+  }
+  const ok=!Object.keys(errs).length;
+  return {ok,errs,C,qs,names:qs.map(q=>q.n),init:ok?qs.map(q=>env[q.n]):null};
+}
+
+function doStep(){
+  if(!comp||!comp.ok||runtimeErr)return false;
+  if(rows.length>20000){runtimeErr='Stopped at 20,000 steps.';return false;}
+  const last=rows[rows.length-1];
+  const env=Object.assign({},comp.C);
+  comp.qs.forEach((q,i)=>env[q.n]=last[i]);
+  for(const q of comp.qs){
+    if(!q.rule)continue;
+    const v=q.rule.f(env);
+    if(!Number.isFinite(v)){
+      runtimeErr=`At step ${rows.length}, ${q.n} became ${Number.isNaN(v)?'undefined':'infinitely large'}. Check its rule, or try a smaller Δt.`;
+      return false;
+    }
+    env[q.n]=v;
+  }
+  rows.push(comp.qs.map(q=>env[q.n]));
+  reached=rows.length-1;
+  return true;
+}
+
+function rebuild(target){
+  stopAll();
+  comp=compileModel();
+  showErrors();
+  compileCond();
+  runtimeErr='';
+  if(comp.ok){
+    rows=[comp.init];
+    while(rows.length-1<target&&doStep());
+    reached=rows.length-1;
+  }else rows=[];
+  const last=Math.max(0,rows.length-1);
+  scrub=follow?last:Math.min(scrub,last);
+  updatePlotSelects();
+  refresh();
+  save();
+}
+
+/* ---------- model UI ---------- */
+function mkInput(val,cls,onInput){
+  const el=document.createElement('input');el.type='text';el.value=val;el.className=cls||'';el.spellcheck=false;el.autocomplete='off';
+  el.addEventListener('input',()=>{onInput(el.value);markDirty();scheduleRebuild();});
+  el.addEventListener('focus',()=>lastFocus=el);
+  return el;
+}
+function mkBtn(txt,cls,title,fn){const b=document.createElement('button');b.textContent=txt;b.className=cls;if(title){b.title=title;b.setAttribute('aria-label',title);}b.onclick=fn;return b;}
+function mkHandle(item,list,arr){
+  const h=document.createElement('div');h.className='grip';h.textContent='⠿';h.title='Drag to reorder';h.setAttribute('aria-label','Drag to reorder');
+  h.addEventListener('pointerdown',e=>startDrag(e,h,item,list,arr));
+  return h;
+}
+function startDrag(e,handle,item,list,arr){
+  if(e.button>0)return;
+  e.preventDefault();
+  try{handle.setPointerCapture(e.pointerId);}catch(_){}
+  item.classList.add('dragging');document.body.classList.add('is-dragging');
+  let lastY=e.clientY,scrollTimer=null;
+  const place=()=>{
+    const others=[...list.children].filter(o=>o!==item);
+    const want=others.filter(o=>{const r=o.getBoundingClientRect();return r.top+r.height/2<lastY;}).length;
+    let cur=[...list.children].indexOf(item);
+    while(cur>want){const prev=item.previousElementSibling;list.insertBefore(prev,item.nextElementSibling);cur--;}
+    while(cur<want){const next=item.nextElementSibling;list.insertBefore(next,item);cur++;}
+  };
+  const edgeScroll=()=>{
+    const z=70;let dy=0;
+    if(lastY<z)dy=-Math.ceil((z-lastY)/6);else if(lastY>innerHeight-z)dy=Math.ceil((lastY-innerHeight+z)/6);
+    if(dy){window.scrollBy(0,dy);place();}
+  };
+  scrollTimer=setInterval(edgeScroll,16);
+  const move=ev=>{lastY=ev.clientY;place();};
+  const end=()=>{
+    clearInterval(scrollTimer);
+    window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',end);window.removeEventListener('pointercancel',end);
+    item.classList.remove('dragging');document.body.classList.remove('is-dragging');
+    const order=[...list.children].map(o=>+o.dataset.i);
+    if(order.some((v,k)=>v!==k)){
+      const copy=arr.slice();order.forEach((v,k)=>arr[k]=copy[v]);
+      structural();
+    }
+  };
+  window.addEventListener('pointermove',move);window.addEventListener('pointerup',end);window.addEventListener('pointercancel',end);
+}
+function renderModel(){
+  const cd=$('consts');cd.innerHTML='';
+  model.consts.forEach((c,i)=>{
+    const item=document.createElement('div');item.className='item';item.dataset.i=i;
+    const row=document.createElement('div');row.className='crow';
+    row.append(mkHandle(item,cd,model.consts));
+    row.append(mkInput(c.n,'mono',v=>c.n=v));
+    const eq=document.createElement('span');eq.textContent='=';eq.style.color='var(--faint)';row.append(eq);
+    row.append(mkInput(c.v,'mono',v=>c.v=v));
+    row.append(mkBtn('✕','icon','Remove constant',()=>{model.consts.splice(i,1);structural();}));
+    const er=document.createElement('div');er.className='rerr';er.id='err-c'+i;
+    item.append(row,er);cd.append(item);
+  });
+  const qd=$('qs');qd.innerHTML='';
+  model.qs.forEach((q,i)=>{
+    const item=document.createElement('div');item.className='item';item.dataset.i=i;
+    const row=document.createElement('div');row.className='qrow';
+    row.append(mkHandle(item,qd,model.qs));
+    row.append(mkInput(q.n,'mono',v=>q.n=v));
+    const r=mkInput(q.r,'mono',v=>q.r=v);r.placeholder='stays the same';row.append(r);
+    const s=mkInput(q.s,'mono',v=>q.s=v);s.placeholder='—';row.append(s);
+    row.append(mkBtn('✕','icon','Remove quantity',()=>{model.qs.splice(i,1);structural();}));
+    const er=document.createElement('div');er.className='rerr';er.id='err-q'+i;
+    item.append(row,er);qd.append(item);
+  });
+  $('runN').value=model.runN;$('runUnit').value=model.runUnit;$('cond').value=model.cond||'';
+}
+function showErrors(){
+  document.querySelectorAll('.rerr').forEach(e=>e.textContent='');
+  document.querySelectorAll('input.bad').forEach(e=>e.classList.remove('bad'));
+  for(const k in comp.errs){
+    const el=$('err-'+k);if(!el)continue;
+    el.textContent=comp.errs[k];
+    const row=el.previousElementSibling;
+    const ins=row.querySelectorAll('input');
+    const msg=comp.errs[k];
+    if(k[0]==='c')(msg.includes('name')||msg.includes('twice')||msg.includes('built-in')?ins[0]:ins[1]).classList.add('bad');
+    else{
+      const idx=msg.startsWith('Start')?2:msg.startsWith('Each step')?1:(msg.includes('name')||msg.includes('twice')||msg.includes('built-in'))?0:-1;
+      if(idx>=0)ins[idx].classList.add('bad');
+    }
+  }
+}
+let rbTimer=null;
+function scheduleRebuild(){clearTimeout(rbTimer);rbTimer=setTimeout(()=>rebuild(reached),250);}
+function structural(){markDirty();renderModel();rebuild(reached);}
+
+const SYMS=['·','Σ','Δ','²','√','½','π','θ','ω','|','(',')'];
+SYMS.forEach(s=>{
+  const b=document.createElement('button');b.textContent=s;
+  b.addEventListener('mousedown',e=>e.preventDefault());
+  b.onclick=()=>{
+    const el=lastFocus;if(!el||!document.body.contains(el))return;
+    const a=el.selectionStart??el.value.length,z=el.selectionEnd??a;
+    const ins=s==='·'?'·':s;
+    el.value=el.value.slice(0,a)+ins+el.value.slice(z);
+    el.focus();el.selectionStart=el.selectionEnd=a+ins.length;
+    el.dispatchEvent(new Event('input'));
+  };
+  $('syms').append(b);
+});
+$('addC').onclick=()=>{model.consts.push({n:'',v:''});structural();const ins=$('consts').querySelectorAll('.crow input');ins[ins.length-2]?.focus();};
+$('addQ').onclick=()=>{model.qs.push({n:'',s:'',r:''});structural();const rs=$('qs').querySelectorAll('.qrow');rs[rs.length-1]?.querySelector('input')?.focus();};
+function dtValue(){return comp&&comp.ok?(comp.C['Δt']??comp.C['dt']):undefined;}
+$('runN').addEventListener('change',()=>{
+  let v=+$('runN').value;
+  if(model.runUnit==='steps'){v=Math.round(v);if(!(v>=1))v=1;if(v>20000)v=20000;}else if(!(v>0))v=model.runN>0?model.runN:1;
+  model.runN=v;$('runN').value=v;stopNote='';markDirty();save();refresh();
+});
+$('runUnit').addEventListener('change',()=>{
+  const u=$('runUnit').value,dt=dtValue();
+  if(dt>0)model.runN=u==='time'?+(model.runN*dt).toPrecision(6):Math.max(1,Math.min(20000,Math.round(model.runN/dt)));
+  model.runUnit=u;$('runN').value=model.runN;stopNote='';markDirty();save();refresh();
+});
+$('cond').addEventListener('input',()=>{model.cond=$('cond').value;markDirty();compileCond();stopNote='';save();refresh();});
+let condFn=null,condErr='',stopNote='';
+function compileCond(){
+  condFn=null;condErr='';$('cond').classList.remove('bad');
+  const src=(model.cond||'').trim();if(!src||!comp||!comp.ok)return;
+  try{const c=compileExpr(src,new Set([...Object.keys(comp.C),...comp.names]),true);condFn=c&&c.f;}
+  catch(e){if(!(e instanceof UErr))throw e;condErr='While: '+e.message;$('cond').classList.add('bad');}
+}
+function limitSteps(){
+  if(model.runUnit!=='time')return model.runN;
+  const dt=dtValue();if(!(dt>0))return null;
+  return Math.min(20000,Math.max(1,Math.ceil(model.runN/dt-1e-9)));
+}
+function condHolds(k){
+  if(!condFn||!rows[k])return true;
+  const env=Object.assign({},comp.C);comp.names.forEach((n,i)=>env[n]=rows[k][i]);
+  return condFn(env)!==0;
+}
+function canGo(){
+  if(!comp||!comp.ok||runtimeErr||condErr)return false;
+  const L=limitSteps();if(L==null)return false;
+  return rows.length-1<L&&condHolds(rows.length-1);
+}
+function noteStop(){
+  if(condFn&&!condHolds(rows.length-1))stopNote=rows.length>1?`stopped: "${model.cond.trim()}" became false`:`"${model.cond.trim()}" is false at the start`;
+}
+let lastExample='custom';
+$('example').addEventListener('focus',()=>lastExample=$('example').value);
+$('example').addEventListener('change',e=>{
+  const key=e.target.value;if(key==='custom')return;
+  const label=e.target.options[e.target.selectedIndex].text;
+  if(dirty)$('example').value=lastExample;
+  guard(`the "${label}" example`,()=>{hideNote();loadExample(key);save();});
+});
+$('title').addEventListener('input',()=>{model.title=$('title').value;dirty=true;save();});
+
+/* ---------- files ---------- */
+function cleanModel(o){
+  const src=o&&o.model?o.model:o;
+  if(!src||!Array.isArray(src.consts)||!Array.isArray(src.qs))throw new Error('bad');
+  const str=v=>v==null?'':String(v);
+  const m={
+    title:str(src.title),
+    consts:src.consts.map(c=>({n:str(c.n),v:str(c.v)})),
+    qs:src.qs.map(q=>({n:str(q.n),s:str(q.s),r:str(q.r)})),
+    runN:+src.runN>0?+src.runN:(+src.steps>0?+src.steps:200),
+    runUnit:src.runUnit==='time'?'time':'steps',
+    cond:str(src.cond)
+  };
+  let pl=Array.isArray(o.plots)?o.plots.filter(p=>p&&Array.isArray(p.ys)&&p.ys.length).map(p=>({kind:p.kind==='track'?'track':'graph',x:str(p.x||'t'),ys:p.ys.slice(0,4).map(str),marker:p.marker!==false})):[];
+  if(!pl.length)pl=[{kind:'graph',x:'t',ys:[m.qs[m.qs.length-1]?.n||'t'],marker:true}];
+  return {model:m,plots:pl};
+}
+function fileName(){const t=(model.title||'').trim().replace(/[\\/:*?"<>|]+/g,'').slice(0,80);return (t||'model')+'.json';}
+function modelText(){return JSON.stringify({app:'step-by-step',version:1,model,plots:plotSpec()},null,1);}
+let dlP=null;
+function downloadsNs(){
+  if(dlP)return dlP;
+  if(window.claude&&typeof window.claude.use==='function'){dlP=Promise.resolve(window.claude.use('downloads')).catch(()=>null);return dlP;}
+  return Promise.resolve(/claude\.ai$|claudeusercontent\.com$|claude\.site$/.test(location.hostname)?null:undefined);
+}
+async function saveFile(){
+  const data=modelText(),name=fileName();
+  const ns=await downloadsNs();
+  if(ns){
+    try{await ns.save({filename:name,data});dirty=false;save();showNote(`Saved as ${name}.`);setTimeout(hideNote,2500);return true;}
+    catch(e){if(e&&e.code==='declined')return false;}
+  }else if(ns===undefined){
+    try{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([data],{type:'application/json'}));a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000);dirty=false;save();return true;}catch(e){}
+  }
+  const t=document.createElement('span');t.textContent='Saving a file isn\'t available here. Copy this text into a file named '+name+':';
+  const ta=document.createElement('textarea');ta.value=data;ta.style.flexBasis='100%';
+  showNote([t,ta,mkBtn('Close','ghost','',hideNote)]);ta.select();
+  return false;
+}
+function openText(text,name){
+  let m;
+  try{m=cleanModel(JSON.parse(text));}
+  catch(e){showNote(`"${name}" isn't a model file from this page.`,'err');return;}
+  guard(`"${name}"`,()=>{hideNote();applyModel(m.model,m.plots);save();});
+}
+function openFile(f){if(!f)return;const r=new FileReader();r.onload=()=>openText(String(r.result),f.name);r.onerror=()=>showNote(`Couldn't read "${f.name}".`,'err');r.readAsText(f);}
+$('bSave').onclick=()=>saveFile();
+$('bOpen').onclick=()=>$('fileIn').click();
+$('fileIn').addEventListener('change',e=>{openFile(e.target.files[0]);e.target.value='';});
+let dragDepth=0;
+const hasFiles=e=>e.dataTransfer&&[...e.dataTransfer.types].includes('Files');
+window.addEventListener('dragenter',e=>{if(!hasFiles(e))return;e.preventDefault();dragDepth++;document.body.classList.add('dropping');});
+window.addEventListener('dragover',e=>{if(hasFiles(e))e.preventDefault();});
+window.addEventListener('dragleave',e=>{if(!hasFiles(e))return;if(--dragDepth<=0){dragDepth=0;document.body.classList.remove('dropping');}});
+window.addEventListener('drop',e=>{if(!hasFiles(e))return;e.preventDefault();dragDepth=0;document.body.classList.remove('dropping');openFile(e.dataTransfer.files[0]);});
+setTimeout(downloadsNs,0);
+
+/* ---------- run controls ---------- */
+function stopAll(){running=false;replaying=false;updateButtons();}
+function updateButtons(){$('bRun').textContent=running?'Pause':'Run';$('bReplay').textContent=replaying?'Pause':'Replay';}
+$('bStep').onclick=()=>{stopAll();stopNote='';if(doStep()){follow=true;scrub=rows.length-1;}refresh();};
+$('bReset').onclick=()=>{follow=true;stopNote='';rebuild(0);};
+$('bRun').onclick=()=>{
+  if(running){stopAll();return;}
+  replaying=false;
+  if(!comp||!comp.ok)return;
+  if(model.runUnit==='time'&&limitSteps()==null){refresh();return;}
+  if(!canGo()){rebuild(0);if(!canGo()){noteStop();refresh();return;}}
+  stopNote='';follow=true;
+  if(speedVal()===0){while(canGo()&&doStep());noteStop();scrub=rows.length-1;refresh();return;}
+  running=true;updateButtons();
+  let acc=0,lt=performance.now();
+  const tick=now=>{
+    if(!running)return;
+    const sp=speedVal();
+    acc+=(now-lt)/1000*(sp||Infinity);lt=now;
+    let n=sp?Math.floor(acc):Infinity;if(sp)acc-=n;else acc=0;
+    while(n-->0&&canGo()){if(!doStep()){running=false;break;}}
+    if(!canGo()){running=false;noteStop();}
+    scrub=rows.length-1;refresh();
+    if(running)requestAnimationFrame(tick);else updateButtons();
+  };
+  requestAnimationFrame(tick);
+};
+$('bReplay').onclick=()=>{
+  if(replaying){stopAll();return;}
+  running=false;if(rows.length<2)return;
+  if(scrub>=rows.length-1)scrub=0;
+  replaying=true;follow=false;updateButtons();
+  let acc=0,lt=performance.now();
+  const tick=now=>{
+    if(!replaying)return;
+    const sp=speedVal();
+    let n;if(sp){acc+=(now-lt)/1000*sp;n=Math.floor(acc);acc-=n;}else n=rows.length;lt=now;
+    scrub=Math.min(rows.length-1,scrub+n);
+    if(scrub>=rows.length-1){replaying=false;follow=true;}
+    refresh();
+    if(replaying)requestAnimationFrame(tick);else updateButtons();
+  };
+  requestAnimationFrame(tick);
+};
+$('scrub').addEventListener('input',e=>{stopAll();scrub=+e.target.value;follow=scrub>=rows.length-1;refresh();});
+function speedVal(){
+  if($('realTime').checked){const dt=dtValue();if(dt>0)return 1/dt;}
+  const v=+$('speed').value;return v>=100?0:Math.round(2*Math.pow(1000,v/99));
+}
+function showSpeed(){
+  const rt=$('realTime').checked,sp=speedVal();
+  $('speed').disabled=rt;$('speed').style.opacity=rt?0.4:1;
+  $('speedOut').textContent=sp?`${+sp.toPrecision(3)} steps/s`:'Instant';
+}
+function saveSpeed(){try{localStorage.setItem('stepper-speed',$('speed').value);localStorage.setItem('stepper-rt',$('realTime').checked?'1':'0');}catch(e){}}
+try{const v=localStorage.getItem('stepper-speed');if(v!=null)$('speed').value=v;$('realTime').checked=localStorage.getItem('stepper-rt')==='1';}catch(e){}
+$('realTime').addEventListener('change',()=>{saveSpeed();refresh();});
+$('speed').addEventListener('input',()=>{showSpeed();saveSpeed();});showSpeed();
+
+/* ---------- plots ---------- */
+const SERIES_L=['#534AB7','#D85A30','#0F6E56','#BA7517'],SERIES_D=['#AFA9EC','#F0997B','#5DCAA5','#EF9F27'];
+const dark=matchMedia('(prefers-color-scheme: dark)');
+const sc=i=>(dark.matches?SERIES_D:SERIES_L)[i%4];
+const cssv=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+function nameOptions(sel,cur){
+  const names=comp?comp.names.filter(n=>n):model.qs.map(q=>q.n.trim()).filter(n=>n);
+  sel.innerHTML='';
+  names.forEach(n=>{const o=document.createElement('option');o.value=n;o.textContent=n;sel.append(o);});
+  if(names.includes(cur))sel.value=cur;
+  else if(cur){const o=document.createElement('option');o.value=cur;o.textContent=cur+' (missing)';sel.append(o);sel.value=cur;}
+}
+function renderPlots(){
+  const box=$('plots');box.innerHTML='';
+  plots.forEach((pl,pi)=>{
+    const card=document.createElement('div');card.className='card';
+    const head=document.createElement('div');head.className='phead';
+    pl.ys.forEach((y,si)=>{
+      const w=document.createElement('span');w.className='ser';
+      const sw=document.createElement('span');sw.className='sw';sw.style.background=sc(si);
+      const sel=document.createElement('select');sel.dataset.role='y';sel.dataset.si=si;
+      sel.onchange=()=>{pl.ys[si]=sel.value;pl.view=null;save();drawAll();};
+      w.append(sw,sel);
+      if(pl.ys.length>1)w.append(mkBtn('✕','icon','Remove series',()=>{pl.ys.splice(si,1);renderPlots();save();}));
+      head.append(w);
+    });
+    if(pl.ys.length<4)head.append(mkBtn('+','icon','Add series',()=>{pl.ys.push(pl.ys[pl.ys.length-1]);renderPlots();save();}));
+    if(pl.kind==='graph'){
+      const t=document.createElement('span');t.textContent='against';head.append(t);
+      const sx=document.createElement('select');sx.dataset.role='x';
+      sx.onchange=()=>{pl.x=sx.value;pl.view=null;save();drawAll();};
+      head.append(sx);
+    }else{const t=document.createElement('span');t.textContent='on a line';head.append(t);}
+    const sp=document.createElement('span');sp.className='sp';head.append(sp);
+    const rz=mkBtn('Reset zoom','ghost','',()=>{pl.view=null;drawAll();});rz.dataset.role='rz';head.append(rz);
+    const ml=document.createElement('label');ml.style.cssText='display:flex;align-items:center;gap:4px';
+    const mc=document.createElement('input');mc.type='checkbox';mc.checked=pl.marker;mc.onchange=()=>{pl.marker=mc.checked;save();drawAll();};
+    ml.append(mc,'Marker');head.append(ml);
+    const fb=mkBtn('⤢','icon','Full screen',()=>toggleMax(pl));fb.dataset.role='max';fb.style.fontSize='15px';head.append(fb);
+    head.append(mkBtn('✕','icon','Remove',()=>{if(pl===maxPlot)toggleMax(pl);plots.splice(pi,1);renderPlots();save();}));
+    const cw=document.createElement('div');cw.className='cwrap';cw.style.height=(pl.kind==='graph'?250:64)+'px';
+    const cv=document.createElement('canvas');cw.append(cv);
+    card.append(head,cw);box.append(card);
+    pl._cv=cv;pl._head=head;pl._card=card;
+    ro.observe(cw);
+    attachZoom(pl);
+  });
+  if(maxPlot){
+    if(plots.includes(maxPlot)){maxPlot._card.classList.add('max');const b=maxPlot._head.querySelector('[data-role=max]');b.textContent='⤡';b.title='Exit full screen';}
+    else{maxPlot=null;document.body.classList.remove('has-max');if(document.fullscreenElement){try{document.exitFullscreen().catch(()=>{});}catch(e){}}}
+  }
+  updatePlotSelects();drawAll();
+}
+function updatePlotSelects(){
+  plots.forEach(pl=>{
+    if(!pl._head)return;
+    pl._head.querySelectorAll('select[data-role=y]').forEach(s=>nameOptions(s,pl.ys[+s.dataset.si]));
+    const sx=pl._head.querySelector('select[data-role=x]');if(sx)nameOptions(sx,pl.x);
+  });
+}
+function addPlot(kind){
+  const names=comp?comp.names:[];
+  const pick=n=>names.includes(n)?n:names[names.length-1]||'';
+  plots.push({kind,x:pick('t'),ys:[pick('x')],marker:true,view:null});
+  renderPlots();save();
+}
+$('addG').onclick=()=>addPlot('graph');
+$('addT').onclick=()=>addPlot('track');
+
+function niceTicks(a,b,n){
+  const span=b-a;if(!(span>0))return {ticks:[a],step:1};
+  const s0=span/n,mag=Math.pow(10,Math.floor(Math.log10(s0))),r=s0/mag;
+  const step=(r<1.5?1:r<3?2:r<7?5:10)*mag;const ticks=[];
+  for(let v=Math.ceil(a/step)*step;v<=b+step*1e-9;v+=step)ticks.push(Math.abs(v)<step*1e-9?0:v);
+  return {ticks,step};
+}
+function fmtTick(v,step){const d=Math.max(0,Math.min(8,-Math.floor(Math.log10(step)+1e-9)));return v.toFixed(d);}
+function range(vals){
+  let lo=Infinity,hi=-Infinity;for(const v of vals){if(v<lo)lo=v;if(v>hi)hi=v;}
+  if(!Number.isFinite(lo))return [-1,1];
+  if(hi-lo<1e-12*Math.max(1,Math.abs(hi))){const d=Math.abs(hi)*0.1||1;return [lo-d,hi+d];}
+  const p=(hi-lo)*0.06;return [lo-p,hi+p];
+}
+function colIdx(n){return comp&&comp.ok?comp.names.indexOf(n):-1;}
+
+function drawPlot(pl){
+  const cv=pl._cv;if(!cv)return;
+  const W=cv.clientWidth,H=cv.clientHeight,d=devicePixelRatio||1;
+  if(cv.width!==Math.round(W*d)||cv.height!==Math.round(H*d)){cv.width=Math.round(W*d);cv.height=Math.round(H*d);}
+  if(!W||!H)return;
+  const ctx=cv.getContext('2d');ctx.setTransform(d,0,0,d,0,0);ctx.clearRect(0,0,W,H);
+  const rz=pl._head.querySelector('[data-role=rz]');if(rz)rz.style.visibility=pl.view?'visible':'hidden';
+  const font='11px system-ui,sans-serif';ctx.font=font;
+  const yi=pl.ys.map(colIdx);
+  if(!rows.length||yi.some(i=>i<0)){ctx.fillStyle=cssv('--faint');ctx.textAlign='center';ctx.fillText(rows.length?'Choose quantities that exist in the model':'Fix the model to see results',W/2,H/2);return;}
+  if(pl.kind==='track'){
+    const L=12,R=12;
+    let x0,x1;
+    if(pl.view){[x0,x1]=pl.view.x;}else{const all=[];yi.forEach(i=>rows.forEach(r=>all.push(r[i])));[x0,x1]=range(all);}
+    const X=v=>L+(v-x0)/(x1-x0)*(W-L-R),ym=Math.round(H/2)-6;
+    const {ticks,step}=niceTicks(x0,x1,Math.max(2,Math.floor(W/90)));
+    ctx.strokeStyle=cssv('--axis');ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(L,ym);ctx.lineTo(W-R,ym);ctx.stroke();
+    ctx.fillStyle=cssv('--faint');ctx.textAlign='center';
+    ticks.forEach(t=>{const px=X(t);ctx.beginPath();ctx.moveTo(px,ym-4);ctx.lineTo(px,ym+4);ctx.stroke();ctx.fillText(fmtTick(t,step),px,ym+20);});
+    yi.forEach((i,si)=>{
+      ctx.fillStyle=sc(si);ctx.globalAlpha=Math.max(0.04,Math.min(0.35,12/rows.length));
+      rows.forEach(r=>{ctx.beginPath();ctx.arc(X(r[i]),ym,H>120?5:3,0,7);ctx.fill();});
+      ctx.globalAlpha=1;
+      if(pl.marker&&rows[scrub]){ctx.beginPath();ctx.arc(X(rows[scrub][i]),ym,H>120?11:7,0,7);ctx.fill();}
+    });
+    drawDrag(ctx,pl,4,H-4);
+    pl._map={L,R,W,H,x0,x1,track:true};
+    return;
+  }
+  const xi=colIdx(pl.x);
+  if(xi<0){ctx.fillStyle=cssv('--faint');ctx.textAlign='center';ctx.fillText('Choose quantities that exist in the model',W/2,H/2);return;}
+  let x0,x1,y0,y1;
+  if(pl.view){[x0,x1]=pl.view.x;if(pl.view.y)[y0,y1]=pl.view.y;}
+  else [x0,x1]=range(rows.map(r=>r[xi]));
+  if(!pl.view||!pl.view.y){
+    const vis=[];yi.forEach(i=>rows.forEach(r=>{if(r[xi]>=x0&&r[xi]<=x1)vis.push(r[i]);}));
+    [y0,y1]=range(vis.length?vis:[0]);
+  }
+  const yt=niceTicks(y0,y1,5);
+  ctx.font=font;
+  const labW=Math.max(...yt.ticks.map(t=>ctx.measureText(fmtTick(t,yt.step)).width))+10;
+  const L=Math.max(34,labW),R=10,T=10,B=34;
+  const X=v=>L+(v-x0)/(x1-x0)*(W-L-R),Y=v=>T+(y1-v)/(y1-y0)*(H-T-B);
+  const xt=niceTicks(x0,x1,Math.max(2,Math.floor((W-L)/80)));
+  ctx.strokeStyle=cssv('--grid');ctx.lineWidth=1;ctx.fillStyle=cssv('--faint');
+  ctx.textAlign='right';
+  yt.ticks.forEach(t=>{const py=Y(t);ctx.beginPath();ctx.moveTo(L,py);ctx.lineTo(W-R,py);ctx.stroke();ctx.fillText(fmtTick(t,yt.step),L-6,py+4);});
+  ctx.textAlign='center';
+  xt.ticks.forEach(t=>{const px=X(t);ctx.beginPath();ctx.moveTo(px,T);ctx.lineTo(px,H-B);ctx.stroke();ctx.fillText(fmtTick(t,xt.step),px,H-B+14);});
+  ctx.strokeStyle=cssv('--axis');
+  if(y0<0&&y1>0){ctx.beginPath();ctx.moveTo(L,Y(0));ctx.lineTo(W-R,Y(0));ctx.stroke();}
+  if(x0<0&&x1>0){ctx.beginPath();ctx.moveTo(X(0),T);ctx.lineTo(X(0),H-B);ctx.stroke();}
+  ctx.textAlign='right';ctx.fillText(pl.x+' →',W-R,H-3);
+  ctx.save();ctx.beginPath();ctx.rect(L,T,W-L-R,H-T-B);ctx.clip();
+  let visCount=0;rows.forEach(r=>{if(r[xi]>=x0&&r[xi]<=x1)visCount++;});
+  const rad=visCount<=300?2.4:visCount<=1500?1.8:1.3;
+  yi.forEach((i,si)=>{
+    const c=sc(si);ctx.strokeStyle=c;ctx.fillStyle=c;
+    rows.forEach(r=>{ctx.beginPath();ctx.arc(X(r[xi]),Y(r[i]),rad,0,7);ctx.fill();});
+    if(pl.marker&&rows[scrub]){const px=X(rows[scrub][xi]),py=Y(rows[scrub][i]);ctx.lineWidth=2;ctx.beginPath();ctx.arc(px,py,6,0,7);ctx.stroke();ctx.beginPath();ctx.arc(px,py,2.5,0,7);ctx.fill();}
+  });
+  ctx.restore();
+  drawDrag(ctx,pl,T,H-B);
+  pl._map={L,R,T,B,W,H,x0,x1,y0,y1,track:false};
+}
+function drawDrag(ctx,pl,top,bot){
+  const dg=pl._drag;if(!dg||dg.x2==null)return;
+  ctx.fillStyle=dark.matches?'rgba(175,169,236,0.18)':'rgba(83,74,183,0.12)';
+  const xa=Math.min(dg.x1,dg.x2),w=Math.abs(dg.x2-dg.x1);
+  if(pl.kind==='track'||Math.abs(dg.y2-dg.y1)<10)ctx.fillRect(xa,top,w,bot-top);
+  else ctx.fillRect(xa,Math.min(dg.y1,dg.y2),w,Math.abs(dg.y2-dg.y1));
+}
+function attachZoom(pl){
+  const cv=pl._cv;
+  const pos=e=>{const r=cv.getBoundingClientRect();return [e.clientX-r.left,e.clientY-r.top];};
+  cv.addEventListener('pointerdown',e=>{if(!pl._map)return;const [x,y]=pos(e);pl._drag={x1:x,y1:y,x2:null,y2:null};cv.setPointerCapture(e.pointerId);});
+  cv.addEventListener('pointermove',e=>{if(!pl._drag)return;const [x,y]=pos(e);pl._drag.x2=x;pl._drag.y2=y;drawPlot(pl);});
+  cv.addEventListener('pointerup',()=>{
+    const dg=pl._drag;pl._drag=null;
+    if(!dg||dg.x2==null||Math.abs(dg.x2-dg.x1)<8){drawPlot(pl);return;}
+    const m=pl._map;
+    const toX=px=>m.x0+(px-m.L)/(m.W-m.L-m.R)*(m.x1-m.x0);
+    const view={x:[toX(Math.min(dg.x1,dg.x2)),toX(Math.max(dg.x1,dg.x2))]};
+    if(!m.track&&Math.abs(dg.y2-dg.y1)>=10){
+      const toY=py=>m.y1-(py-m.T)/(m.H-m.T-m.B)*(m.y1-m.y0);
+      view.y=[toY(Math.max(dg.y1,dg.y2)),toY(Math.min(dg.y1,dg.y2))];
+    }
+    pl.view=view;drawPlot(pl);
+  });
+  cv.addEventListener('dblclick',()=>{pl.view=null;drawPlot(pl);});
+}
+function drawAll(){plots.forEach(drawPlot);}
+const ro=new ResizeObserver(ents=>{for(const en of ents){const pl=plots.find(p=>p._cv&&p._cv.parentNode===en.target);if(pl)drawPlot(pl);}});
+let maxPlot=null;
+function toggleMax(pl){
+  const on=maxPlot!==pl;
+  if(maxPlot){maxPlot._card.classList.remove('max');const b=maxPlot._head.querySelector('[data-role=max]');b.textContent='⤢';b.title='Full screen';}
+  maxPlot=on?pl:null;
+  document.body.classList.toggle('has-max',on);
+  if(on){
+    const hdr=document.querySelector('header');
+    window.scrollTo(0,Math.max(window.scrollY,hdr.offsetTop+hdr.offsetHeight+14));
+    setBarH();
+    pl._card.classList.add('max');const b=pl._head.querySelector('[data-role=max]');b.textContent='⤡';b.title='Exit full screen';
+    try{const r=document.documentElement.requestFullscreen?.();r&&r.catch&&r.catch(()=>{});}catch(e){}
+  }else if(document.fullscreenElement){try{const r=document.exitFullscreen();r&&r.catch&&r.catch(()=>{});}catch(e){}}
+}
+document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement&&maxPlot)toggleMax(maxPlot);});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&maxPlot&&!document.fullscreenElement)toggleMax(maxPlot);});
+const setBarH=()=>document.documentElement.style.setProperty('--barH',Math.max(0,$('bar').getBoundingClientRect().bottom)+'px');
+new ResizeObserver(setBarH).observe($('bar'));window.addEventListener('resize',setBarH);
+
+/* ---------- table, status ---------- */
+function fmt(v){if(v===0)return '0';const a=Math.abs(v);if(a>=1e5||a<1e-3)return v.toExponential(3);return String(+v.toPrecision(4));}
+let RH=25,HEAD=26,tblRaf=0;
+function renderTable(follow,depth=0){
+  const t=$('tbl'),box=$('tscroll');
+  if(!comp||!comp.ok||!rows.length){t.innerHTML='';return;}
+  const n=rows.length,vh=Math.max(RH,box.clientHeight-HEAD);
+  let st=box.scrollTop;
+  if(follow){
+    const top=scrub*RH;
+    if(top<st)st=top;else if(top+RH>st+vh)st=top+RH-vh;
+  }
+  const a=Math.max(0,Math.floor(st/RH)-6),b=Math.min(n,a+Math.ceil(vh/RH)+14);
+  let h='<thead><tr><th>step</th>'+comp.names.map(x=>`<th>${esc(x)}</th>`).join('')+'</tr></thead><tbody>';
+  if(a>0)h+=`<tr class="pad" style="height:${a*RH}px"><td colspan="${comp.names.length+1}"></td></tr>`;
+  for(let k=a;k<b;k++)h+=`<tr data-k="${k}" class="${k===scrub?'cur':''}"><td>${k}</td>`+rows[k].map(v=>`<td>${fmt(v)}</td>`).join('')+'</tr>';
+  if(b<n)h+=`<tr class="pad" style="height:${(n-b)*RH}px"><td colspan="${comp.names.length+1}"></td></tr>`;
+  t.innerHTML=h+'</tbody>';
+  if(box.scrollTop!==st)box.scrollTop=st;
+  if(depth>1)return;
+  const r=t.querySelector('tr[data-k]'),th=t.querySelector('thead');
+  const nr=r?r.getBoundingClientRect().height:RH,nh=th?th.getBoundingClientRect().height:HEAD;
+  if(!(nr>4)||!(nh>4))return;
+  const changed=Math.abs(nr-RH)>0.5||Math.abs(nh-HEAD)>0.5;RH=nr;HEAD=nh;
+  if(changed||Math.max(RH,box.clientHeight-HEAD)!==vh)renderTable(follow,depth+1);
+}
+new ResizeObserver(()=>renderTable(false)).observe($('tscroll'));
+$('tscroll').addEventListener('scroll',()=>{cancelAnimationFrame(tblRaf);tblRaf=requestAnimationFrame(()=>renderTable(false));});
+$('tbl').addEventListener('click',e=>{const tr=e.target.closest('tr[data-k]');if(!tr)return;stopAll();scrub=+tr.dataset.k;follow=scrub>=rows.length-1;refresh();});
+function esc(s){return s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+const narrow=matchMedia('(max-width:700px)');narrow.addEventListener?.('change',()=>refresh());
+function refresh(){
+  const sl=$('scrub');sl.max=Math.max(0,rows.length-1);sl.value=scrub;
+  const st=$('status');
+  if(!comp||!comp.ok){st.textContent='Fix the highlighted rows to run the model.';}
+  else{
+    const ti=comp.names.indexOf('t');
+    st.textContent=(narrow.matches?`Step ${scrub}/${rows.length-1}`:`Step ${scrub} of ${rows.length-1}`)+(ti>=0&&rows[scrub]?`  ·  t = ${fmt(rows[scrub][ti])}`:'')+(stopNote&&scrub===rows.length-1?`  ·  ${stopNote}`:'');
+  }
+  const dtMissing=comp&&comp.ok&&(model.runUnit==='time'||$('realTime').checked)&&!(dtValue()>0);
+  if(typeof showSpeed==='function')showSpeed();
+  $('banner').textContent=[runtimeErr,condErr,dtMissing?'Stopping after a time and running in real time need a constant named Δt (larger than 0).':''].filter(Boolean).join('  ');
+  drawAll();renderTable(true);
+}
+$('bCsv').onclick=()=>{
+  if(!comp||!comp.ok)return;
+  const csv=['step\t'+comp.names.join('\t'),...rows.map((r,k)=>k+'\t'+r.map(v=>+v.toPrecision(12)).join('\t'))].join('\r\n');
+  const box=$('csvBox');
+  const fallback=()=>{box.innerHTML='';const ta=document.createElement('textarea');ta.value=csv;box.append(ta);ta.select();};
+  try{navigator.clipboard.writeText(csv).then(()=>{box.innerHTML='<p class="status" style="margin:6px 0 0">Copied. Paste it into Excel or Sheets.</p>';setTimeout(()=>box.innerHTML='',2500);},fallback);}catch(e){fallback();}
+};
+window.addEventListener('resize',drawAll);
+dark.addEventListener?.('change',()=>{renderPlots();});
+
+/* ---------- start ---------- */
+if(!restore())loadExample('spring');
+</script>
+</body>
+</html>

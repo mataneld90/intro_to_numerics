@@ -1,0 +1,3 @@
+*.zip
+tests/_tmp.json
+__pycache__/

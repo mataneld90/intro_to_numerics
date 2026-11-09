@@ -1,0 +1,73 @@
+{
+ "app": "step-by-step",
+ "version": 1,
+ "model": {
+  "title": "Task B: a falling ball",
+  "consts": [
+   {
+    "n": "m",
+    "v": "0.05"
+   },
+   {
+    "n": "g",
+    "v": "9.8"
+   },
+   {
+    "n": "c",
+    "v": "0.002"
+   },
+   {
+    "n": "Δt",
+    "v": "0.05"
+   }
+  ],
+  "qs": [
+   {
+    "n": "t",
+    "s": "0",
+    "r": "t + Δt"
+   },
+   {
+    "n": "ΣF",
+    "s": "",
+    "r": "m·g − c·v·|v|"
+   },
+   {
+    "n": "a",
+    "s": "",
+    "r": "ΣF / m"
+   },
+   {
+    "n": "v",
+    "s": "0",
+    "r": "v + a·Δt"
+   },
+   {
+    "n": "y",
+    "s": "100",
+    "r": "y + v·Δt"
+   }
+  ],
+  "runN": 15,
+  "runUnit": "time",
+  "cond": "y ≥ 0"
+ },
+ "plots": [
+  {
+   "kind": "graph",
+   "x": "t",
+   "ys": [
+    "y"
+   ],
+   "marker": true
+  },
+  {
+   "kind": "graph",
+   "x": "t",
+   "ys": [
+    "v"
+   ],
+   "marker": true
+  }
+ ]
+}
