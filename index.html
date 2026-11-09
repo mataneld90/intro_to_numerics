@@ -956,7 +956,7 @@ function refresh(){
   if(!comp||!comp.ok){st.textContent='Fix the highlighted rows to run the model.';}
   else{
     const ti=comp.names.indexOf('t');
-    st.textContent=(narrow.matches?`Step ${scrub}/${rows.length-1}`:`Step ${scrub} of ${rows.length-1}`)+(ti>=0&&rows[scrub]?`  ·  t = ${fmt(rows[scrub][ti])}`:'')+(stopNote&&scrub===rows.length-1?`  ·  ${stopNote}`:'');
+    st.textContent=(narrow.matches?`Step ${scrub}/${rows.length-1}`:`Step ${scrub} of ${rows.length-1}`)+(ti>=0&&rows[scrub]?`  |  t = ${fmt(rows[scrub][ti])}`:'')+(stopNote&&scrub===rows.length-1?`  |  ${stopNote}`:'');
   }
   const dtMissing=comp&&comp.ok&&(model.runUnit==='time'||$('realTime').checked)&&!(dtValue()>0);
   if(typeof showSpeed==='function')showSpeed();
