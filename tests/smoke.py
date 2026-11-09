@@ -37,11 +37,37 @@ async def main():
         rises = await pg.evaluate("(()=>{const i=comp.names.indexOf('E');let n=0;for(let k=1;k<rows.length;k++)if(rows[k][i]>rows[k-1][i]+1e-12)n++;return n})()")
         check("spring energy monotonic", rises == 0, rises)
 
-        # row order: moving x above v (explicit Euler) makes energy grow
+        # an edit after a run keeps the old run and blocks Run until Reset
+        e_before = await pg.evaluate("rows[200][comp.names.indexOf('E')]")
         await pg.evaluate("(()=>{const q=model.qs;const iv=q.findIndex(r=>r.n==='v'),ix=q.findIndex(r=>r.n==='x');[q[iv],q[ix]]=[q[ix],q[iv]];structural();})()")
         await pg.wait_for_timeout(300)
+        kept = await pg.evaluate("rows.length===201&&rows[200][comp.names.indexOf('E')]")
+        check("edit keeps the old run", kept == e_before, kept)
+        check("edit blocks Run", await pg.is_disabled("#bRun") and await pg.is_disabled("#bStep"))
+        check("status says model changed", "model changed" in await pg.inner_text("#status"))
+        await pg.evaluate("(()=>{const q=model.qs;const iv=q.findIndex(r=>r.n==='v'),ix=q.findIndex(r=>r.n==='x');[q[iv],q[ix]]=[q[ix],q[iv]];structural();})()")
+        await pg.wait_for_timeout(300)
+        check("undoing the edit unblocks Run", not await pg.is_disabled("#bRun"))
+        await pg.evaluate("(()=>{const q=model.qs;const iv=q.findIndex(r=>r.n==='v'),ix=q.findIndex(r=>r.n==='x');[q[iv],q[ix]]=[q[ix],q[iv]];structural();})()")
+        await pg.wait_for_timeout(300)
+
+        # row order: moving x above v (explicit Euler) makes energy grow, after Reset and Run
+        await pg.click("#bReset"); await pg.wait_for_timeout(100)
+        check("reset unblocks Run", not await pg.is_disabled("#bRun"))
+        await pg.click("#bRun"); await pg.wait_for_timeout(200)
         grows = await pg.evaluate("(()=>{const i=comp.names.indexOf('E');return rows[rows.length-1][i]>rows[0][i]})()")
         check("explicit Euler gains energy", grows)
+
+        # keep zoom: snapped range is kept, survives Reset zoom, and is saved
+        await pg.evaluate("plots[0].view={x:[0.03,7.96]};drawAll()")
+        await pg.click("#plots .card >> nth=0 >> button:has-text('Keep zoom')")
+        fx = await pg.evaluate("plots[0].fixed")
+        check("keep zoom snaps the range", fx == {"x": [0, 8], "y": None}, fx)
+        await pg.dblclick("#plots canvas >> nth=0")
+        check("double-click returns to kept range", await pg.evaluate("plots[0].view===null&&plots[0].fixed.x[1]===8"))
+        check("kept range is saved", await pg.evaluate("JSON.parse(localStorage.getItem('stepper-v1')).plots[0].fixed.x[1]===8"))
+        await pg.click("#plots .card >> nth=0 >> button:has-text('Auto axes')")
+        check("auto axes clears it", await pg.evaluate("plots[0].fixed===null"))
 
         # error messages
         rule = pg.locator("#qs .qrow").nth(1).locator("input").nth(1)

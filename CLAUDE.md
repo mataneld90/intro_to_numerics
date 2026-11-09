@@ -40,14 +40,15 @@ An earlier version gave students fixed update rules and a force menu. It was rej
 - **While** condition (for example `y ≥ 0`): the run stops when it becomes false. Decision: the step that breaks the condition is kept, so the projectile ends slightly below the ground; that's intentional and good for class discussion.
 - The Step button ignores both limits (decision). There's a hard cap of 20,000 steps.
 - **Speed:** a logarithmic slider from 2 to 2,000 steps/s, plus Instant at the far right. The "Real time" checkbox sets the speed to 1/Δt steps/s. Both can change mid-run.
-- Editing the model recomputes immediately, up to the step reached so far (`reached`).
+- Editing the model does **not** recompute an existing run (decision). The old run stays on screen; Step and Run are disabled and the status adds "model changed: Reset to run it" until Reset. Errors still show immediately. Undoing the edit back to the run's model unblocks Run. If there's no run yet (only step 0), an edit recomputes step 0 straight away. In code, `comp` is the compile behind `rows`, and `edit` is the compile of the model as it is now.
 
 ## Interface
 
 - The control panel stays at the top while scrolling. It holds Step, Run, Replay, Reset, the step slider, the status, the stop limit, the condition and speed.
 - **Left column:** constants and quantities. Rows are dragged by the ⠿ handle using pointer events, so mouse and touch both work. Reordering moves the *other* rows, never the dragged one, so pointer capture isn't lost. There's a symbol bar: `· Σ Δ ² √ ½ π θ ω | ( )`.
 - **Right column:** graphs (any quantity against any other, up to 4 series), 1D tracks (positions on a line, with faint dots for every step and a marker for the current one), and the data table.
-  - Graphs show dots only, with no connecting lines. Drag to zoom and double-click to reset. Full screen fills the window below the control panel, so the controls stay usable.
+  - Graphs show dots only, with no connecting lines. Drag to zoom and double-click to reset.
+  - **Keep zoom** (shown while zoomed) makes the zoom the graph's fixed axis range (`fixed: {x, y}`, `y` null for an x-only zoom), snapped to round numbers (0.03–7.96 becomes 0–8). Reset zoom and double-click return to it; **Auto axes** clears it. Changing a graph's quantity clears that axis. Saved in files, so a task file can preset axes. Full screen fills the window below the control panel, so the controls stay usable.
   - The data table only draws the rows on screen. It ignores a zero row-height measurement (the page can load hidden) and redraws via ResizeObserver. Clicking a row jumps to that step.
   - "Copy for Excel" copies tab-separated text rounded to 12 significant digits; Excel doesn't split pasted commas.
 - **Header:** model name, Open, Save, Example menu. Save writes `.json` as `{app:"step-by-step", version:1, model, plots}`. In claude.ai it uses the `downloads` capability; elsewhere it's a normal download. Opening or loading an example over unsaved changes asks first (Save first / Replace / Cancel). Dropping a file onto the page opens it.

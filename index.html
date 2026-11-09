@@ -38,6 +38,8 @@ button.ghost:hover{color:var(--text)}
 button.icon{width:26px;height:26px;padding:0;border-color:transparent;color:var(--faint);font-size:13px;line-height:1}
 button.icon:hover{color:var(--text)}
 button.primary{background:var(--accent);border-color:var(--accent);color:var(--panel)}
+button:disabled{opacity:.4;cursor:default}
+button:not(.primary):disabled:hover{background:transparent}
 .crow{display:grid;grid-template-columns:30px 90px 14px minmax(0,1fr) 26px;gap:6px;align-items:center;margin:4px 0}
 .qhead,.qrow{display:grid;grid-template-columns:30px 76px minmax(0,1.75fr) minmax(0,1.25fr) 26px;gap:6px;align-items:center}
 .qhead{font-size:12px;color:var(--faint);margin-bottom:2px}
@@ -315,7 +317,7 @@ function loadExample(key){
 }
 function applyModel(m,pl){
   model=m;
-  plots=pl.map(p=>({kind:p.kind,x:p.x||'t',ys:p.ys,marker:p.marker!==false,view:null}));
+  plots=pl.map(p=>({kind:p.kind,x:p.x||'t',ys:p.ys,marker:p.marker!==false,fixed:p.fixed||null,view:null}));
   $('title').value=model.title||'';
   dirty=false;stopNote='';follow=true;
   renderModel();renderPlots();
@@ -333,7 +335,7 @@ function guard(what,action){
   const no=mkBtn('Cancel','ghost','',()=>hideNote());
   showNote([t,sv,yes,no]);
 }
-function plotSpec(){return plots.map(p=>({kind:p.kind,x:p.x,ys:p.ys,marker:p.marker}));}
+function plotSpec(){return plots.map(p=>Object.assign({kind:p.kind,x:p.x,ys:p.ys,marker:p.marker},p.fixed?{fixed:p.fixed}:{}));}
 function save(){try{localStorage.setItem('stepper-v1',JSON.stringify({model,plots:plotSpec(),dirty}));}catch(e){}}
 function restore(){
   try{const s=JSON.parse(localStorage.getItem('stepper-v1'));if(s&&s.model&&s.plots){const m=cleanModel(s);applyModel(m.model,m.plots);dirty=!!s.dirty;$('example').value='custom';return true;}}catch(e){}
@@ -432,9 +434,13 @@ function doStep(){
   return true;
 }
 
+/* comp: the compile that produced rows. edit: the compile of the model as it is now.
+   Edits after a run don't touch rows; Run and Step wait for Reset (stale). */
+let edit=null,stale=false,runSig='';
+const modelSig=()=>JSON.stringify([model.consts,model.qs]);
 function rebuild(target){
   stopAll();
-  comp=compileModel();
+  comp=compileModel();edit=comp;stale=false;runSig=modelSig();
   showErrors();
   compileCond();
   runtimeErr='';
@@ -525,12 +531,12 @@ function renderModel(){
 function showErrors(){
   document.querySelectorAll('.rerr').forEach(e=>e.textContent='');
   document.querySelectorAll('input.bad').forEach(e=>e.classList.remove('bad'));
-  for(const k in comp.errs){
+  for(const k in edit.errs){
     const el=$('err-'+k);if(!el)continue;
-    el.textContent=comp.errs[k];
+    el.textContent=edit.errs[k];
     const row=el.previousElementSibling;
     const ins=row.querySelectorAll('input');
-    const msg=comp.errs[k];
+    const msg=edit.errs[k];
     if(k[0]==='c')(msg.includes('name')||msg.includes('twice')||msg.includes('built-in')?ins[0]:ins[1]).classList.add('bad');
     else{
       const idx=msg.startsWith('Start')?2:msg.startsWith('Each step')?1:(msg.includes('name')||msg.includes('twice')||msg.includes('built-in'))?0:-1;
@@ -539,8 +545,16 @@ function showErrors(){
   }
 }
 let rbTimer=null;
-function scheduleRebuild(){clearTimeout(rbTimer);rbTimer=setTimeout(()=>rebuild(reached),250);}
-function structural(){markDirty();renderModel();rebuild(reached);}
+function scheduleRebuild(){clearTimeout(rbTimer);rbTimer=setTimeout(modelEdited,250);}
+function structural(){markDirty();renderModel();modelEdited();}
+function modelEdited(){
+  clearTimeout(rbTimer);
+  if(rows.length<=1){rebuild(0);return;}
+  stopAll();
+  if(modelSig()===runSig){edit=comp;stale=false;}
+  else{edit=compileModel();stale=true;}
+  showErrors();compileCond();refresh();save();
+}
 
 const SYMS=['·','Σ','Δ','²','√','½','π','θ','ω','|','(',')'];
 SYMS.forEach(s=>{
@@ -558,7 +572,7 @@ SYMS.forEach(s=>{
 });
 $('addC').onclick=()=>{model.consts.push({n:'',v:''});structural();const ins=$('consts').querySelectorAll('.crow input');ins[ins.length-2]?.focus();};
 $('addQ').onclick=()=>{model.qs.push({n:'',s:'',r:''});structural();const rs=$('qs').querySelectorAll('.qrow');rs[rs.length-1]?.querySelector('input')?.focus();};
-function dtValue(){return comp&&comp.ok?(comp.C['Δt']??comp.C['dt']):undefined;}
+function dtValue(){return edit&&edit.ok?(edit.C['Δt']??edit.C['dt']):undefined;}
 $('runN').addEventListener('change',()=>{
   let v=+$('runN').value;
   if(model.runUnit==='steps'){v=Math.round(v);if(!(v>=1))v=1;if(v>20000)v=20000;}else if(!(v>0))v=model.runN>0?model.runN:1;
@@ -573,8 +587,8 @@ $('cond').addEventListener('input',()=>{model.cond=$('cond').value;markDirty();c
 let condFn=null,condErr='',stopNote='';
 function compileCond(){
   condFn=null;condErr='';$('cond').classList.remove('bad');
-  const src=(model.cond||'').trim();if(!src||!comp||!comp.ok)return;
-  try{const c=compileExpr(src,new Set([...Object.keys(comp.C),...comp.names]),true);condFn=c&&c.f;}
+  const src=(model.cond||'').trim();if(!src||!edit||!edit.ok)return;
+  try{const c=compileExpr(src,new Set([...Object.keys(edit.C),...edit.names]),true);condFn=c&&c.f;}
   catch(e){if(!(e instanceof UErr))throw e;condErr='While: '+e.message;$('cond').classList.add('bad');}
 }
 function limitSteps(){
@@ -588,7 +602,7 @@ function condHolds(k){
   return condFn(env)!==0;
 }
 function canGo(){
-  if(!comp||!comp.ok||runtimeErr||condErr)return false;
+  if(stale||!comp||!comp.ok||runtimeErr||condErr)return false;
   const L=limitSteps();if(L==null)return false;
   return rows.length-1<L&&condHolds(rows.length-1);
 }
@@ -618,7 +632,9 @@ function cleanModel(o){
     runUnit:src.runUnit==='time'?'time':'steps',
     cond:str(src.cond)
   };
-  let pl=Array.isArray(o.plots)?o.plots.filter(p=>p&&Array.isArray(p.ys)&&p.ys.length).map(p=>({kind:p.kind==='track'?'track':'graph',x:str(p.x||'t'),ys:p.ys.slice(0,4).map(str),marker:p.marker!==false})):[];
+  const rng=a=>Array.isArray(a)&&a.length===2&&a.every(Number.isFinite)&&a[0]<a[1]?[a[0],a[1]]:null;
+  const fixed=f=>{if(!f)return null;const x=rng(f.x),y=rng(f.y);return x||y?{x,y}:null;};
+  let pl=Array.isArray(o.plots)?o.plots.filter(p=>p&&Array.isArray(p.ys)&&p.ys.length).map(p=>({kind:p.kind==='track'?'track':'graph',x:str(p.x||'t'),ys:p.ys.slice(0,4).map(str),marker:p.marker!==false,fixed:fixed(p.fixed)})):[];
   if(!pl.length)pl=[{kind:'graph',x:'t',ys:[m.qs[m.qs.length-1]?.n||'t'],marker:true}];
   return {model:m,plots:pl};
 }
@@ -665,10 +681,11 @@ setTimeout(downloadsNs,0);
 /* ---------- run controls ---------- */
 function stopAll(){running=false;replaying=false;updateButtons();}
 function updateButtons(){$('bRun').textContent=running?'Pause':'Run';$('bReplay').textContent=replaying?'Pause':'Replay';}
-$('bStep').onclick=()=>{stopAll();stopNote='';if(doStep()){follow=true;scrub=rows.length-1;}refresh();};
+$('bStep').onclick=()=>{if(stale)return;stopAll();stopNote='';if(doStep()){follow=true;scrub=rows.length-1;}refresh();};
 $('bReset').onclick=()=>{follow=true;stopNote='';rebuild(0);};
 $('bRun').onclick=()=>{
   if(running){stopAll();return;}
+  if(stale)return;
   replaying=false;
   if(!comp||!comp.ok)return;
   if(model.runUnit==='time'&&limitSteps()==null){refresh();return;}
@@ -743,7 +760,7 @@ function renderPlots(){
       const w=document.createElement('span');w.className='ser';
       const sw=document.createElement('span');sw.className='sw';sw.style.background=sc(si);
       const sel=document.createElement('select');sel.dataset.role='y';sel.dataset.si=si;
-      sel.onchange=()=>{pl.ys[si]=sel.value;pl.view=null;save();drawAll();};
+      sel.onchange=()=>{pl.ys[si]=sel.value;pl.view=null;unfix(pl,pl.kind==='track'?'x':'y');save();drawAll();};
       w.append(sw,sel);
       if(pl.ys.length>1)w.append(mkBtn('✕','icon','Remove series',()=>{pl.ys.splice(si,1);renderPlots();save();}));
       head.append(w);
@@ -752,11 +769,13 @@ function renderPlots(){
     if(pl.kind==='graph'){
       const t=document.createElement('span');t.textContent='against';head.append(t);
       const sx=document.createElement('select');sx.dataset.role='x';
-      sx.onchange=()=>{pl.x=sx.value;pl.view=null;save();drawAll();};
+      sx.onchange=()=>{pl.x=sx.value;pl.view=null;unfix(pl,'x');save();drawAll();};
       head.append(sx);
     }else{const t=document.createElement('span');t.textContent='on a line';head.append(t);}
     const sp=document.createElement('span');sp.className='sp';head.append(sp);
     const rz=mkBtn('Reset zoom','ghost','',()=>{pl.view=null;drawAll();});rz.dataset.role='rz';head.append(rz);
+    const kp=mkBtn('Keep zoom','ghost','',()=>keepZoom(pl));kp.dataset.role='keep';head.append(kp);
+    const au=mkBtn('Auto axes','ghost','',()=>{pl.fixed=null;pl.view=null;save();drawAll();});au.dataset.role='auto';head.append(au);
     const ml=document.createElement('label');ml.style.cssText='display:flex;align-items:center;gap:4px';
     const mc=document.createElement('input');mc.type='checkbox';mc.checked=pl.marker;mc.onchange=()=>{pl.marker=mc.checked;save();drawAll();};
     ml.append(mc,'Marker');head.append(ml);
@@ -788,6 +807,18 @@ function addPlot(kind){
   plots.push({kind,x:pick('t'),ys:[pick('x')],marker:true,view:null});
   renderPlots();save();
 }
+function unfix(pl,ax){if(!pl.fixed)return;pl.fixed[ax]=null;if(!pl.fixed.x&&!pl.fixed.y)pl.fixed=null;}
+function snapRange(r){
+  const {step}=niceTicks(r[0],r[1],10);
+  const a=Math.round(r[0]/step)*step,b=Math.round(r[1]/step)*step;
+  const c=v=>+v.toPrecision(12);
+  return b>a?[c(a),c(b)]:r.slice();
+}
+function keepZoom(pl){
+  if(!pl.view)return;
+  pl.fixed={x:snapRange(pl.view.x),y:pl.view.y?snapRange(pl.view.y):null};
+  pl.view=null;save();drawPlot(pl);
+}
 $('addG').onclick=()=>addPlot('graph');
 $('addT').onclick=()=>addPlot('track');
 
@@ -813,14 +844,17 @@ function drawPlot(pl){
   if(cv.width!==Math.round(W*d)||cv.height!==Math.round(H*d)){cv.width=Math.round(W*d);cv.height=Math.round(H*d);}
   if(!W||!H)return;
   const ctx=cv.getContext('2d');ctx.setTransform(d,0,0,d,0,0);ctx.clearRect(0,0,W,H);
-  const rz=pl._head.querySelector('[data-role=rz]');if(rz)rz.style.visibility=pl.view?'visible':'hidden';
+  const role=r=>pl._head.querySelector(`[data-role=${r}]`);
+  role('rz').style.display=role('keep').style.display=pl.view?'':'none';
+  role('auto').style.display=!pl.view&&pl.fixed?'':'none';
   const font='11px system-ui,sans-serif';ctx.font=font;
   const yi=pl.ys.map(colIdx);
   if(!rows.length||yi.some(i=>i<0)){ctx.fillStyle=cssv('--faint');ctx.textAlign='center';ctx.fillText(rows.length?'Choose quantities that exist in the model':'Fix the model to see results',W/2,H/2);return;}
   if(pl.kind==='track'){
     const L=12,R=12;
     let x0,x1;
-    if(pl.view){[x0,x1]=pl.view.x;}else{const all=[];yi.forEach(i=>rows.forEach(r=>all.push(r[i])));[x0,x1]=range(all);}
+    const vx=pl.view?pl.view.x:pl.fixed&&pl.fixed.x;
+    if(vx){[x0,x1]=vx;}else{const all=[];yi.forEach(i=>rows.forEach(r=>all.push(r[i])));[x0,x1]=range(all);}
     const X=v=>L+(v-x0)/(x1-x0)*(W-L-R),ym=Math.round(H/2)-6;
     const {ticks,step}=niceTicks(x0,x1,Math.max(2,Math.floor(W/90)));
     ctx.strokeStyle=cssv('--axis');ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(L,ym);ctx.lineTo(W-R,ym);ctx.stroke();
@@ -839,9 +873,10 @@ function drawPlot(pl){
   const xi=colIdx(pl.x);
   if(xi<0){ctx.fillStyle=cssv('--faint');ctx.textAlign='center';ctx.fillText('Choose quantities that exist in the model',W/2,H/2);return;}
   let x0,x1,y0,y1;
-  if(pl.view){[x0,x1]=pl.view.x;if(pl.view.y)[y0,y1]=pl.view.y;}
-  else [x0,x1]=range(rows.map(r=>r[xi]));
-  if(!pl.view||!pl.view.y){
+  const v=pl.view||pl.fixed||{};
+  if(v.x)[x0,x1]=v.x;else [x0,x1]=range(rows.map(r=>r[xi]));
+  if(v.y)[y0,y1]=v.y;
+  else{
     const vis=[];yi.forEach(i=>rows.forEach(r=>{if(r[xi]>=x0&&r[xi]<=x1)vis.push(r[i]);}));
     [y0,y1]=range(vis.length?vis:[0]);
   }
@@ -956,9 +991,11 @@ function refresh(){
   if(!comp||!comp.ok){st.textContent='Fix the highlighted rows to run the model.';}
   else{
     const ti=comp.names.indexOf('t');
-    st.textContent=(narrow.matches?`Step ${scrub}/${rows.length-1}`:`Step ${scrub} of ${rows.length-1}`)+(ti>=0&&rows[scrub]?`  |  t = ${fmt(rows[scrub][ti])}`:'')+(stopNote&&scrub===rows.length-1?`  |  ${stopNote}`:'');
+    st.textContent=(narrow.matches?`Step ${scrub}/${rows.length-1}`:`Step ${scrub} of ${rows.length-1}`)+(ti>=0&&rows[scrub]?`  |  t = ${fmt(rows[scrub][ti])}`:'')+(stopNote&&scrub===rows.length-1&&!stale?`  |  ${stopNote}`:'')
+      +(stale?(edit.ok?'  |  model changed: Reset to run it':'  |  fix the highlighted rows'):'');
   }
-  const dtMissing=comp&&comp.ok&&(model.runUnit==='time'||$('realTime').checked)&&!(dtValue()>0);
+  $('bRun').disabled=$('bStep').disabled=stale;
+  const dtMissing=edit&&edit.ok&&(model.runUnit==='time'||$('realTime').checked)&&!(dtValue()>0);
   if(typeof showSpeed==='function')showSpeed();
   $('banner').textContent=[runtimeErr,condErr,dtMissing?'Stopping after a time and running in real time need a constant named Δt (larger than 0).':''].filter(Boolean).join('  ');
   drawAll();renderTable(true);
