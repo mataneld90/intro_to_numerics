@@ -1,7 +1,10 @@
 """Smoke tests for index.html. Run: pip install playwright && python tests/smoke.py
 Uses system Chrome if CHROME is set, otherwise Playwright's bundled Chromium."""
-import asyncio, os, pathlib
+import asyncio, functools, http.server, os, pathlib, threading
 from playwright.async_api import async_playwright
+
+class QuietHandler(http.server.SimpleHTTPRequestHandler):
+    def log_message(self, *a): pass
 
 PAGE = (pathlib.Path(__file__).parent.parent / "index.html").resolve().as_uri()
 FAILS = []
@@ -75,6 +78,24 @@ async def main():
         await pg.click("#bRun"); await pg.wait_for_timeout(200)
         y = await pg.evaluate("rows[rows.length-1][comp.names.indexOf('y')]")
         check("task B bug makes the ball rise", y > 100, y)
+
+        # ?task= links (need http, so serve the repo locally)
+        root = str(pathlib.Path(__file__).parent.parent)
+        srv = http.server.ThreadingHTTPServer(("127.0.0.1", 0), functools.partial(QuietHandler, directory=root))
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+        base = f"http://127.0.0.1:{srv.server_address[1]}/index.html"
+        await pg.goto(base); await pg.evaluate("localStorage.clear()")
+        await pg.goto(base + "?task=falling-ball"); await pg.wait_for_timeout(500)
+        check("task link loads the task", await pg.input_value("#title") == "Task B: a falling ball")
+        check("task link clears the query", "task=" not in pg.url, pg.url)
+        await pg.fill("#title", "Student work"); await pg.wait_for_timeout(100)
+        await pg.goto(base + "?task=falling-ball"); await pg.wait_for_timeout(500)
+        check("task link asks before replacing work", await pg.locator("#note.on button:has-text('Replace')").count() == 1)
+        await pg.click("#note button:has-text('Cancel')")
+        check("cancel keeps the work", await pg.input_value("#title") == "Student work")
+        await pg.goto(base + "?task=nope"); await pg.wait_for_timeout(500)
+        check("missing task shows an error", "Couldn't open the task" in await pg.inner_text("#note"))
+        srv.shutdown()
 
         check("no page errors", not errs, errs)
         await b.close()

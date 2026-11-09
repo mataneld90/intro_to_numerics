@@ -53,11 +53,14 @@ An earlier version gave students fixed update rules and a force menu. It was rej
 - **Header:** model name, Open, Save, Example menu. Save writes `.json` as `{app:"step-by-step", version:1, model, plots}`. In claude.ai it uses the `downloads` capability; elsewhere it's a normal download. Opening or loading an example over unsaved changes asks first (Save first / Replace / Cancel). Dropping a file onto the page opens it.
 - localStorage keys: `stepper-v1` (current model plus the unsaved flag), `stepper-speed`, `stepper-rt`.
 
+## Hosting and task links
+
+- Live at https://mataneld90.github.io/intro_to_numerics/ (GitHub Pages from `main`, root). Repo: `mataneld90/intro_to_numerics`, public. Commits use the GitHub noreply address.
+- `?task=<name>` loads `tasks/<name>.json` (names are letters, digits, `_`, `-`). It goes through the same unsaved-changes guard as Open, then removes `?task=` from the address bar, so reloading keeps the student's work instead of reloading the task. A missing task shows a plain error note. It needs http, so the smoke tests serve the repo locally for these checks.
+
 ## Next
 
-1. Host on GitHub Pages. This is a public repository.
-2. `?task=<name>` loads `tasks/<name>.json` directly, so students open a task from a link with no file handling.
-3. Student trial: one 45-minute lesson. The plan is in Matan's doc "Step by step: first student trial". Expect fixes from it.
+1. Student trial: one 45-minute lesson. The plan is in Matan's doc "Step by step: first student trial". Expect fixes from it.
 
 ## Open ideas (not decided)
 

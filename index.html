@@ -975,6 +975,17 @@ dark.addEventListener?.('change',()=>{renderPlots();});
 
 /* ---------- start ---------- */
 if(!restore())loadExample('spring');
+async function openTask(name){
+  if(!/^[\w-]+$/.test(name)){showNote(`"${name}" isn't a task name.`,'err');return;}
+  let m;
+  try{const r=await fetch(`tasks/${name}.json`,{cache:'no-cache'});if(!r.ok)throw 0;m=cleanModel(await r.json());}
+  catch(e){showNote(`Couldn't open the task "${name}". Check the link.`,'err');return;}
+  guard(`the task "${m.model.title||name}"`,()=>{hideNote();applyModel(m.model,m.plots);$('example').value='custom';save();});
+}
+{
+  const u=new URL(location.href),task=u.searchParams.get('task');
+  if(task!=null){u.searchParams.delete('task');history.replaceState(null,'',u.pathname+u.search+u.hash);openTask(task.trim());}
+}
 </script>
 </body>
 </html>
