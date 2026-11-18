@@ -177,7 +177,7 @@ async def main():
         dctx = await b.new_context(color_scheme="dark")
         dpg = await dctx.new_page(); await dpg.goto(PAGE); await dpg.wait_for_timeout(200)
         bg = await dpg.evaluate("getComputedStyle(document.body).backgroundColor")
-        check("light theme in a dark browser", bg == "rgb(250, 250, 247)", bg)
+        check("light theme in a dark browser", bg == "rgb(233, 232, 243)", bg)
         await dctx.close()
 
         check("no page errors", not errs, errs)

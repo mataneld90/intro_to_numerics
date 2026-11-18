@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Step by step: numerical simulation</title>
 <style>
-:root{--bg:#fafaf7;--panel:#fff;--text:#1f1e1c;--muted:#6b6a65;--faint:#9a988f;--line:#e3e1da;--line2:#cfccc2;--accent:#534AB7;--accent-bg:#EEEDFE;--err:#A32D2D;--err-bg:#FCEBEB;--grid:#eeece6;--axis:#b9b6ac;--hover:#f1efe8}
+:root{--bg:#E9E8F3;--panel:#fff;--text:#1f1e2b;--muted:#625f73;--faint:#918ea3;--line:#dcdae8;--line2:#c6c3d8;--accent:#534AB7;--accent-bg:#EEEDFE;--err:#A32D2D;--err-bg:#FCEBEB;--grid:#eeedf4;--axis:#b3b0c4;--hover:#f1f0f8}
 :root{color-scheme:light}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
@@ -24,7 +24,7 @@ h1{font-size:18px;font-weight:500;margin:0;white-space:nowrap}
 body.dropping .wrap{outline:2px dashed var(--accent);outline-offset:-6px;border-radius:12px}
 .cols{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:16px;align-items:start}
 @media (max-width:920px){.cols{grid-template-columns:minmax(0,1fr)}}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:14px}
+.card{background:var(--panel);border:1px solid var(--line);box-shadow:0 1px 3px rgba(40,30,90,.07);border-radius:12px;padding:14px 16px;margin-bottom:14px}
 .sec{font-size:12px;color:var(--muted);margin:0 0 8px;display:flex;justify-content:space-between;align-items:center}
 input,select,button{font:inherit;color:var(--text)}
 input[type=text],input[type=number]{background:var(--panel);border:1px solid var(--line2);border-radius:6px;height:32px;padding:0 8px;width:100%;min-width:0}
