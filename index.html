@@ -2,11 +2,12 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta name="color-scheme" content="light">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Step by step: numerical simulation</title>
 <style>
 :root{--bg:#fafaf7;--panel:#fff;--text:#1f1e1c;--muted:#6b6a65;--faint:#9a988f;--line:#e3e1da;--line2:#cfccc2;--accent:#534AB7;--accent-bg:#EEEDFE;--err:#A32D2D;--err-bg:#FCEBEB;--grid:#eeece6;--axis:#b9b6ac;--hover:#f1efe8}
-@media (prefers-color-scheme:dark){:root{--bg:#1b1b19;--panel:#242422;--text:#ecebe6;--muted:#a9a79f;--faint:#77756e;--line:#3a3936;--line2:#4a4945;--accent:#AFA9EC;--accent-bg:#2f2c55;--err:#F09595;--err-bg:#3d1c1c;--grid:#2e2e2b;--axis:#55534e;--hover:#2e2e2b}}
+:root{color-scheme:light}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
 .wrap{max-width:1280px;margin:0 auto;padding:16px}
@@ -774,9 +775,9 @@ $('realTime').addEventListener('change',()=>{saveSpeed();refresh();});
 $('speed').addEventListener('input',()=>{showSpeed();saveSpeed();});showSpeed();
 
 /* ---------- plots ---------- */
-const SERIES_L=['#534AB7','#D85A30','#0F6E56','#BA7517'],SERIES_D=['#AFA9EC','#F0997B','#5DCAA5','#EF9F27'];
-const dark=matchMedia('(prefers-color-scheme: dark)');
-const sc=i=>(dark.matches?SERIES_D:SERIES_L)[i%4];
+/* always the light theme, whatever the browser's setting (decision) */
+const SERIES=['#534AB7','#D85A30','#0F6E56','#BA7517'];
+const sc=i=>SERIES[i%4];
 const cssv=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 
 function nameOptions(sel,cur){
@@ -1018,7 +1019,7 @@ function drawPlot(pl){
 }
 function drawDrag(ctx,pl,top,bot){
   const dg=pl._drag;if(!dg||dg.x2==null)return;
-  ctx.fillStyle=dark.matches?'rgba(175,169,236,0.18)':'rgba(83,74,183,0.12)';
+  ctx.fillStyle='rgba(83,74,183,0.12)';
   const xa=Math.min(dg.x1,dg.x2),w=Math.abs(dg.x2-dg.x1);
   if(pl.kind==='track'||Math.abs(dg.y2-dg.y1)<10)ctx.fillRect(xa,top,w,bot-top);
   else ctx.fillRect(xa,Math.min(dg.y1,dg.y2),w,Math.abs(dg.y2-dg.y1));
@@ -1117,7 +1118,6 @@ $('bCsv').onclick=()=>{
   try{navigator.clipboard.writeText(csv).then(()=>{box.innerHTML='<p class="status" style="margin:6px 0 0">Copied. Paste it into Excel or Sheets.</p>';setTimeout(()=>box.innerHTML='',2500);},fallback);}catch(e){fallback();}
 };
 window.addEventListener('resize',drawAll);
-dark.addEventListener?.('change',()=>{renderPlots();});
 
 /* ---------- start ---------- */
 if(!restore())loadExample('spring');

@@ -53,6 +53,7 @@ An earlier version gave students fixed update rules and a force menu. It was rej
   - The data table only draws the rows on screen. It ignores a zero row-height measurement (the page can load hidden) and redraws via ResizeObserver. Clicking a row jumps to that step.
   - "Copy for Excel" copies tab-separated text rounded to 12 significant digits; Excel doesn't split pasted commas.
 - **Header:** model name, Open, Save, Example menu. Save writes `.json` as `{app:"step-by-step", version:1, model, plots, layout}`. In claude.ai it uses the `downloads` capability; elsewhere it's a normal download. Opening or loading an example over unsaved changes asks first (Save first / Replace / Cancel). Dropping a file onto the page opens it.
+- **Theme:** always light, even when the browser or OS is in dark mode (decision: Matan wants the colored theme). `color-scheme: light` keeps form controls light too. There is no dark theme.
 - localStorage keys: `stepper-v1` (current model plus the unsaved flag), `stepper-speed`, `stepper-rt`.
 
 ## Hosting and task links
