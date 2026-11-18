@@ -42,6 +42,11 @@ button:disabled{opacity:.4;cursor:default}
 button:not(.primary):disabled:hover{background:transparent}
 .crow{display:grid;grid-template-columns:30px 90px 14px minmax(0,1fr) 26px;gap:6px;align-items:center;margin:4px 0}
 .qhead,.qrow{display:grid;grid-template-columns:30px 76px minmax(0,1fr) minmax(0,2.2fr) 26px;gap:6px;align-items:center}
+.qrow{transition:grid-template-columns .15s}
+.qrow:has(> input:nth-child(3):focus){grid-template-columns:30px 76px minmax(0,2.2fr) minmax(0,1fr) 26px}
+.cval{position:relative;min-width:0}
+.cval input.has-val{padding-right:var(--valw,0px)}
+.cval span{position:absolute;right:9px;top:50%;transform:translateY(-50%);color:var(--faint);font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:13px;pointer-events:none;white-space:nowrap}
 .qhead{font-size:12px;color:var(--faint);margin-bottom:2px}
 .qrow{margin:4px 0}
 .grip{height:32px;display:flex;align-items:center;justify-content:center;color:var(--faint);cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;font-size:16px;border-radius:6px}
@@ -51,7 +56,7 @@ button:not(.primary):disabled:hover{background:transparent}
 .item.dragging .grip{cursor:grabbing;color:var(--accent)}
 body.is-dragging{user-select:none;-webkit-user-select:none;cursor:grabbing}
 @media (pointer:coarse){.grip{font-size:20px}input[type=text],input[type=number],select{font-size:16px}}
-@media (max-width:520px){.qhead,.qrow{grid-template-columns:26px 54px minmax(0,1fr) minmax(0,1.9fr) 22px;gap:4px}.crow{grid-template-columns:26px 70px 12px minmax(0,1fr) 22px;gap:4px}.wrap{padding:10px}.card{padding:12px}}
+@media (max-width:520px){.qhead,.qrow{grid-template-columns:26px 54px minmax(0,1fr) minmax(0,1.9fr) 22px;gap:4px}.qrow:has(> input:nth-child(3):focus){grid-template-columns:26px 54px minmax(0,1.9fr) minmax(0,1fr) 22px}.crow{grid-template-columns:26px 70px 12px minmax(0,1fr) 22px;gap:4px}.wrap{padding:10px}.card{padding:12px}}
 .rerr{font-size:12.5px;color:var(--err);margin:-1px 0 6px 36px}
 .rerr:empty{display:none}
 .syms{display:flex;flex-wrap:wrap;gap:4px;margin-top:10px}
@@ -515,7 +520,9 @@ function renderModel(){
     row.append(mkHandle(item,cd,model.consts));
     row.append(mkInput(c.n,'mono',v=>c.n=v));
     const eq=document.createElement('span');eq.textContent='=';eq.style.color='var(--faint)';row.append(eq);
-    row.append(mkInput(c.v,'mono',v=>c.v=v));
+    const vw=document.createElement('div');vw.className='cval';
+    const vs=document.createElement('span');vs.id='val-c'+i;
+    vw.append(mkInput(c.v,'mono',v=>c.v=v),vs);row.append(vw);
     row.append(mkBtn('✕','icon','Remove constant',()=>{model.consts.splice(i,1);structural();}));
     const er=document.createElement('div');er.className='rerr';er.id='err-c'+i;
     item.append(row,er);cd.append(item);
@@ -534,7 +541,20 @@ function renderModel(){
   });
   $('runN').value=model.runN;$('runUnit').value=model.runUnit;$('cond').value=model.cond||'';showRunN();
 }
+/* a constant written as a formula shows its value faintly at the end of the field */
+const PLAIN_NUM=/^\s*[-−–]?(\d+([.,]\d*)?|[.,]\d+)([eE][+-]?\d+)?\s*$/;
+function showConstValues(){
+  model.consts.forEach((c,i)=>{
+    const sp=$('val-c'+i);if(!sp)return;
+    const n=c.n.trim(),inp=sp.previousElementSibling;
+    const show=!PLAIN_NUM.test(c.v)&&edit&&n in edit.C&&!edit.errs['c'+i];
+    sp.textContent=show?'= '+fmt(edit.C[n]):'';
+    inp.classList.toggle('has-val',show);
+    if(show)inp.style.setProperty('--valw',(sp.offsetWidth+16)+'px');
+  });
+}
 function showErrors(){
+  showConstValues();
   document.querySelectorAll('.rerr').forEach(e=>e.textContent='');
   document.querySelectorAll('input.bad').forEach(e=>e.classList.remove('bad'));
   for(const k in edit.errs){

@@ -18,8 +18,8 @@ An earlier version gave students fixed update rules and a force menu. It was rej
 
 ## Model semantics (the core; keep them stable)
 
-- **Constants:** `name = value`, evaluated top to bottom. A constant may use only constants above it.
-- **Quantities:** a name, a start value, and an "each step" rule, shown in that column order (Each step is the widest field). Every step evaluates the rules top to bottom:
+- **Constants:** `name = value`, evaluated top to bottom. A constant may use only constants above it. When the value is a formula rather than a plain number, its result shows faintly at the end of the field (`= 17.68`).
+- **Quantities:** a name, a start value, and an "each step" rule, shown in that column order. Each step is the wider field, but while Start has focus the two widths swap (CSS `:has`), so long start formulas fit while typing. Every step evaluates the rules top to bottom:
   - in a rule, a quantity *above* has its value from this step, and one *below* (including the quantity itself) has its previous value;
   - so row order matters: `v` above `x` is Euler-Cromer (stable), and `x` above `v` is explicit Euler (energy grows). This is a teaching point, not a bug;
   - an empty rule means the quantity keeps its value.

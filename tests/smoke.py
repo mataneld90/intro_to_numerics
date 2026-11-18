@@ -81,6 +81,19 @@ async def main():
         syms = await pg.evaluate("[...document.querySelectorAll('#syms button')].map(b=>b.textContent).join('')")
         check("symbol bar", syms == "·²√½|()αβΔθπΣω", syms)
 
+        # a constant written as a formula shows its value; a plain number doesn't
+        await pg.evaluate("model.consts.push({n:'w',v:'√(k/m)'});structural()"); await pg.wait_for_timeout(200)
+        check("formula constant shows its value", await pg.inner_text("#val-c4") == "= 2")
+        check("plain constant shows nothing", await pg.inner_text("#val-c0") == "")
+        await pg.evaluate("model.consts.pop();structural()"); await pg.wait_for_timeout(200)
+
+        # the field being typed in gets the wider column
+        start = pg.locator("#qs .qrow").nth(0).locator("input").nth(1)
+        await start.focus(); await pg.wait_for_timeout(300)
+        ws = await pg.evaluate("[...document.querySelectorAll('#qs .qrow')[0].querySelectorAll('input')].map(i=>i.offsetWidth)")
+        check("focused Start widens", ws[1] > ws[2], ws)
+        await start.blur(); await pg.wait_for_timeout(300)
+
         # origin toggle: E is always positive, so with origin its axis starts at 0
         await (await pcard(pg,2)).locator("input[data-role=origin]").check()
         y0 = await pg.evaluate("plots[2]._map.y0")
