@@ -41,7 +41,7 @@ button.primary{background:var(--accent);border-color:var(--accent);color:var(--p
 button:disabled{opacity:.4;cursor:default}
 button:not(.primary):disabled:hover{background:transparent}
 .crow{display:grid;grid-template-columns:30px 90px 14px minmax(0,1fr) 26px;gap:6px;align-items:center;margin:4px 0}
-.qhead,.qrow{display:grid;grid-template-columns:30px 76px minmax(0,1.75fr) minmax(0,1.25fr) 26px;gap:6px;align-items:center}
+.qhead,.qrow{display:grid;grid-template-columns:30px 76px minmax(0,1fr) minmax(0,2.2fr) 26px;gap:6px;align-items:center}
 .qhead{font-size:12px;color:var(--faint);margin-bottom:2px}
 .qrow{margin:4px 0}
 .grip{height:32px;display:flex;align-items:center;justify-content:center;color:var(--faint);cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;font-size:16px;border-radius:6px}
@@ -51,10 +51,16 @@ button:not(.primary):disabled:hover{background:transparent}
 .item.dragging .grip{cursor:grabbing;color:var(--accent)}
 body.is-dragging{user-select:none;-webkit-user-select:none;cursor:grabbing}
 @media (pointer:coarse){.grip{font-size:20px}input[type=text],input[type=number],select{font-size:16px}}
-@media (max-width:520px){.qhead,.qrow{grid-template-columns:26px 54px minmax(0,1.7fr) minmax(0,1fr) 22px;gap:4px}.crow{grid-template-columns:26px 70px 12px minmax(0,1fr) 22px;gap:4px}.wrap{padding:10px}.card{padding:12px}}
+@media (max-width:520px){.qhead,.qrow{grid-template-columns:26px 54px minmax(0,1fr) minmax(0,1.9fr) 22px;gap:4px}.crow{grid-template-columns:26px 70px 12px minmax(0,1fr) 22px;gap:4px}.wrap{padding:10px}.card{padding:12px}}
 .rerr{font-size:12.5px;color:var(--err);margin:-1px 0 6px 36px}
 .rerr:empty{display:none}
 .syms{display:flex;flex-wrap:wrap;gap:4px;margin-top:10px}
+.symgap{width:10px}
+.col{min-height:80px}
+.cgrip{display:inline-block;cursor:grab;color:var(--faint);touch-action:none;user-select:none;-webkit-user-select:none;padding:0 6px 0 0;font-size:14px}
+.cgrip:hover{color:var(--text)}
+.card.dragging{outline:2px solid var(--accent);box-shadow:0 6px 18px rgba(0,0,0,.12)}
+.card.dragging .cgrip{cursor:grabbing;color:var(--accent)}
 .syms button{height:28px;min-width:32px;padding:0 8px;font-family:ui-monospace,Menlo,monospace}
 .ctrl{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .status{font-size:13px;color:var(--muted);margin-top:10px;font-variant-numeric:tabular-nums}
@@ -124,7 +130,7 @@ textarea{width:100%;height:120px;font-family:ui-monospace,Menlo,monospace;font-s
     <span class="status" id="status"></span>
     <span class="opts">
       <label>Stop after <input type="number" id="runN" min="0" step="any" style="width:72px">
-        <select id="runUnit"><option value="steps">steps</option><option value="time">s</option></select></label>
+        <select id="runUnit"><option value="steps">steps</option><option value="time">sec</option><option value="never">Never</option></select></label>
       <label>while <input type="text" id="cond" class="mono" placeholder="always" spellcheck="false" autocomplete="off" style="width:120px"></label>
       <label class="spd"><span class="lspeed">Speed</span>
         <input type="range" id="speed" min="0" max="100" step="1" value="49" aria-label="Run speed">
@@ -136,30 +142,29 @@ textarea{width:100%;height:120px;font-family:ui-monospace,Menlo,monospace;font-s
   <div class="banner" id="banner"></div>
 </div>
 <div class="cols">
-<div>
-  <div class="card">
-    <p class="sec"><span>Constants</span></p>
+<div class="col" id="colL">
+  <div class="card" data-panel="consts">
+    <p class="sec"><span><span class="cgrip" title="Drag to move">⠿</span>Constants</span></p>
     <div id="consts"></div>
     <button class="ghost" id="addC">+ Constant</button>
   </div>
-  <div class="card">
-    <p class="sec"><span>Quantities, calculated top to bottom in every step</span></p>
-    <div class="qhead"><span></span><span>Name</span><span>Each step</span><span>Start</span><span></span></div>
+  <div class="card" data-panel="qs">
+    <p class="sec"><span><span class="cgrip" title="Drag to move">⠿</span>Quantities, calculated top to bottom in every step</span></p>
+    <div class="qhead"><span></span><span>Name</span><span>Start</span><span>Each step</span><span></span></div>
     <div id="qs"></div>
     <button class="ghost" id="addQ">+ Quantity</button>
     <div class="syms" id="syms"></div>
   </div>
 </div>
-<div>
-  <div id="plots"></div>
-  <div style="display:flex;gap:8px;margin:-4px 0 14px">
-    <button class="ghost" id="addG">+ Graph</button>
-    <button class="ghost" id="addT">+ 1D track</button>
-  </div>
-  <div class="card">
-    <p class="sec"><span>Data</span><button class="ghost" id="bCsv">Copy for Excel</button></p>
+<div class="col" id="colR">
+  <div class="card" data-panel="data">
+    <p class="sec"><span><span class="cgrip" title="Drag to move">⠿</span>Data</span><button class="ghost" id="bCsv">Copy for Excel</button></p>
     <div class="tscroll" id="tscroll"><table id="tbl"></table></div>
     <div id="csvBox"></div>
+  </div>
+  <div id="adds" style="display:flex;gap:8px;margin:-4px 0 14px">
+    <button class="ghost" id="addG">+ Graph</button>
+    <button class="ghost" id="addT">+ 1D track</button>
   </div>
 </div>
 </div>
@@ -315,9 +320,10 @@ function loadExample(key){
   applyModel({title:EX_TITLES[key]||'',consts:ex.consts,qs:ex.qs,runN:ex.runN,runUnit:ex.runUnit,cond:ex.cond},ex.plots);
   $('example').value=key;
 }
-function applyModel(m,pl){
+function applyModel(m,pl,lay){
   model=m;
-  plots=pl.map(p=>({kind:p.kind,x:p.x||'t',ys:p.ys,marker:p.marker!==false,fixed:p.fixed||null,view:null}));
+  plots=pl.map(p=>({id:'p'+(++pid),kind:p.kind,x:p.x||'t',ys:p.ys,marker:p.marker!==false,origin:!!p.origin,fixed:p.fixed||null,view:null}));
+  layout=layoutFromSpec(lay);
   $('title').value=model.title||'';
   dirty=false;stopNote='';follow=true;
   renderModel();renderPlots();
@@ -335,10 +341,10 @@ function guard(what,action){
   const no=mkBtn('Cancel','ghost','',()=>hideNote());
   showNote([t,sv,yes,no]);
 }
-function plotSpec(){return plots.map(p=>Object.assign({kind:p.kind,x:p.x,ys:p.ys,marker:p.marker},p.fixed?{fixed:p.fixed}:{}));}
-function save(){try{localStorage.setItem('stepper-v1',JSON.stringify({model,plots:plotSpec(),dirty}));}catch(e){}}
+function plotSpec(){return plots.map(p=>Object.assign({kind:p.kind,x:p.x,ys:p.ys,marker:p.marker},p.origin?{origin:true}:{},p.fixed?{fixed:p.fixed}:{}));}
+function save(){try{localStorage.setItem('stepper-v1',JSON.stringify({model,plots:plotSpec(),layout:layoutSpec(),dirty}));}catch(e){}}
 function restore(){
-  try{const s=JSON.parse(localStorage.getItem('stepper-v1'));if(s&&s.model&&s.plots){const m=cleanModel(s);applyModel(m.model,m.plots);dirty=!!s.dirty;$('example').value='custom';return true;}}catch(e){}
+  try{const s=JSON.parse(localStorage.getItem('stepper-v1'));if(s&&s.model&&s.plots){const m=cleanModel(s);applyModel(m.model,m.plots,m.layout);dirty=!!s.dirty;$('example').value='custom';return true;}}catch(e){}
   return false;
 }
 
@@ -520,13 +526,13 @@ function renderModel(){
     const row=document.createElement('div');row.className='qrow';
     row.append(mkHandle(item,qd,model.qs));
     row.append(mkInput(q.n,'mono',v=>q.n=v));
-    const r=mkInput(q.r,'mono',v=>q.r=v);r.placeholder='stays the same';row.append(r);
     const s=mkInput(q.s,'mono',v=>q.s=v);s.placeholder='—';row.append(s);
+    const r=mkInput(q.r,'mono',v=>q.r=v);r.placeholder='stays the same';row.append(r);
     row.append(mkBtn('✕','icon','Remove quantity',()=>{model.qs.splice(i,1);structural();}));
     const er=document.createElement('div');er.className='rerr';er.id='err-q'+i;
     item.append(row,er);qd.append(item);
   });
-  $('runN').value=model.runN;$('runUnit').value=model.runUnit;$('cond').value=model.cond||'';
+  $('runN').value=model.runN;$('runUnit').value=model.runUnit;$('cond').value=model.cond||'';showRunN();
 }
 function showErrors(){
   document.querySelectorAll('.rerr').forEach(e=>e.textContent='');
@@ -539,7 +545,7 @@ function showErrors(){
     const msg=edit.errs[k];
     if(k[0]==='c')(msg.includes('name')||msg.includes('twice')||msg.includes('built-in')?ins[0]:ins[1]).classList.add('bad');
     else{
-      const idx=msg.startsWith('Start')?2:msg.startsWith('Each step')?1:(msg.includes('name')||msg.includes('twice')||msg.includes('built-in'))?0:-1;
+      const idx=msg.startsWith('Start')?1:msg.startsWith('Each step')?2:(msg.includes('name')||msg.includes('twice')||msg.includes('built-in'))?0:-1;
       if(idx>=0)ins[idx].classList.add('bad');
     }
   }
@@ -556,8 +562,10 @@ function modelEdited(){
   showErrors();compileCond();refresh();save();
 }
 
-const SYMS=['·','Σ','Δ','²','√','½','π','θ','ω','|','(',')'];
+/* operators first, then Greek letters in alphabetical order; '' is a gap */
+const SYMS=['·','²','√','½','|','(',')','','α','β','Δ','θ','π','Σ','ω'];
 SYMS.forEach(s=>{
+  if(!s){const g=document.createElement('span');g.className='symgap';$('syms').append(g);return;}
   const b=document.createElement('button');b.textContent=s;
   b.addEventListener('mousedown',e=>e.preventDefault());
   b.onclick=()=>{
@@ -578,10 +586,15 @@ $('runN').addEventListener('change',()=>{
   if(model.runUnit==='steps'){v=Math.round(v);if(!(v>=1))v=1;if(v>20000)v=20000;}else if(!(v>0))v=model.runN>0?model.runN:1;
   model.runN=v;$('runN').value=v;stopNote='';markDirty();save();refresh();
 });
+/* "never" keeps runN in the unit used before it, so switching back restores it */
+let unitBeforeNever=null;
+function showRunN(){$('runN').style.display=model.runUnit==='never'?'none':'';}
 $('runUnit').addEventListener('change',()=>{
   const u=$('runUnit').value,dt=dtValue();
-  if(dt>0)model.runN=u==='time'?+(model.runN*dt).toPrecision(6):Math.max(1,Math.min(20000,Math.round(model.runN/dt)));
-  model.runUnit=u;$('runN').value=model.runN;stopNote='';markDirty();save();refresh();
+  const from=model.runUnit==='never'?unitBeforeNever:model.runUnit;
+  if(u==='never')unitBeforeNever=from;
+  else if(from&&from!==u&&dt>0)model.runN=u==='time'?+(model.runN*dt).toPrecision(6):Math.max(1,Math.min(20000,Math.round(model.runN/dt)));
+  model.runUnit=u;$('runN').value=model.runN;showRunN();stopNote='';markDirty();save();refresh();
 });
 $('cond').addEventListener('input',()=>{model.cond=$('cond').value;markDirty();compileCond();stopNote='';save();refresh();});
 let condFn=null,condErr='',stopNote='';
@@ -592,6 +605,7 @@ function compileCond(){
   catch(e){if(!(e instanceof UErr))throw e;condErr='While: '+e.message;$('cond').classList.add('bad');}
 }
 function limitSteps(){
+  if(model.runUnit==='never')return 20000;
   if(model.runUnit!=='time')return model.runN;
   const dt=dtValue();if(!(dt>0))return null;
   return Math.min(20000,Math.max(1,Math.ceil(model.runN/dt-1e-9)));
@@ -629,17 +643,18 @@ function cleanModel(o){
     consts:src.consts.map(c=>({n:str(c.n),v:str(c.v)})),
     qs:src.qs.map(q=>({n:str(q.n),s:str(q.s),r:str(q.r)})),
     runN:+src.runN>0?+src.runN:(+src.steps>0?+src.steps:200),
-    runUnit:src.runUnit==='time'?'time':'steps',
+    runUnit:['time','never'].includes(src.runUnit)?src.runUnit:'steps',
     cond:str(src.cond)
   };
   const rng=a=>Array.isArray(a)&&a.length===2&&a.every(Number.isFinite)&&a[0]<a[1]?[a[0],a[1]]:null;
   const fixed=f=>{if(!f)return null;const x=rng(f.x),y=rng(f.y);return x||y?{x,y}:null;};
-  let pl=Array.isArray(o.plots)?o.plots.filter(p=>p&&Array.isArray(p.ys)&&p.ys.length).map(p=>({kind:p.kind==='track'?'track':'graph',x:str(p.x||'t'),ys:p.ys.slice(0,4).map(str),marker:p.marker!==false,fixed:fixed(p.fixed)})):[];
+  let pl=Array.isArray(o.plots)?o.plots.filter(p=>p&&Array.isArray(p.ys)&&p.ys.length).map(p=>({kind:p.kind==='track'?'track':'graph',x:str(p.x||'t'),ys:p.ys.slice(0,4).map(str),marker:p.marker!==false,origin:p.origin===true,fixed:fixed(p.fixed)})):[];
   if(!pl.length)pl=[{kind:'graph',x:'t',ys:[m.qs[m.qs.length-1]?.n||'t'],marker:true}];
-  return {model:m,plots:pl};
+  const lay=Array.isArray(o.layout)&&o.layout.length===2&&o.layout.every(c=>Array.isArray(c))?o.layout.map(c=>c.map(str)):null;
+  return {model:m,plots:pl,layout:lay};
 }
 function fileName(){const t=(model.title||'').trim().replace(/[\\/:*?"<>|]+/g,'').slice(0,80);return (t||'model')+'.json';}
-function modelText(){return JSON.stringify({app:'step-by-step',version:1,model,plots:plotSpec()},null,1);}
+function modelText(){return JSON.stringify({app:'step-by-step',version:1,model,plots:plotSpec(),layout:layoutSpec()},null,1);}
 let dlP=null;
 function downloadsNs(){
   if(dlP)return dlP;
@@ -664,7 +679,7 @@ function openText(text,name){
   let m;
   try{m=cleanModel(JSON.parse(text));}
   catch(e){showNote(`"${name}" isn't a model file from this page.`,'err');return;}
-  guard(`"${name}"`,()=>{hideNote();applyModel(m.model,m.plots);save();});
+  guard(`"${name}"`,()=>{hideNote();applyModel(m.model,m.plots,m.layout);save();});
 }
 function openFile(f){if(!f)return;const r=new FileReader();r.onload=()=>openText(String(r.result),f.name);r.onerror=()=>showNote(`Couldn't read "${f.name}".`,'err');r.readAsText(f);}
 $('bSave').onclick=()=>saveFile();
@@ -751,11 +766,73 @@ function nameOptions(sel,cur){
   if(names.includes(cur))sel.value=cur;
   else if(cur){const o=document.createElement('option');o.value=cur;o.textContent=cur+' (missing)';sel.append(o);sel.value=cur;}
 }
+/* ---------- panel layout: two columns of cards, each card moved by its ⠿ grip ----------
+   layout holds panel keys per column: 'consts', 'qs', 'data' and plot ids.
+   In files, plots are referred to by index ('p0', 'p1', ...). */
+let layout=null,pid=0;
+const FIXED_PANELS=['consts','qs','data'];
+function layoutSpec(){return layout?layout.map(c=>c.map(k=>{const i=plots.findIndex(p=>p.id===k);return i>=0?'p'+i:k;})):null;}
+function layoutFromSpec(spec){
+  if(!spec)return [['consts','qs'],[...plots.map(p=>p.id),'data']];
+  return spec.map(c=>c.map(k=>{const m=/^p(\d+)$/.exec(k);return m?(plots[+m[1]]?.id||''):k;}));
+}
+function fixLayout(){
+  const keys=new Set([...FIXED_PANELS,...plots.map(p=>p.id)]),seen=new Set();
+  layout=layout.map(c=>c.filter(k=>keys.has(k)&&!seen.has(k)&&seen.add(k)));
+  for(const p of plots)if(!seen.has(p.id)){const R=layout[1],d=R.indexOf('data');R.splice(d<0?R.length:d,0,p.id);}
+  if(!seen.has('consts'))layout[0].unshift('consts');
+  if(!seen.has('qs'))layout[0].splice(layout[0].indexOf('consts')+1,0,'qs');
+  if(!seen.has('data'))layout[1].push('data');
+}
+function panelEl(k){return FIXED_PANELS.includes(k)?document.querySelector(`.card[data-panel=${k}]`):plots.find(p=>p.id===k)?._card;}
+function placePanels(){
+  fixLayout();
+  [$('colL'),$('colR')].forEach((col,ci)=>layout[ci].forEach(k=>{const e=panelEl(k);if(e)col.append(e);}));
+  $('colR').append($('adds'));
+}
+function startPanelDrag(e,card){
+  if(e.button>0)return;
+  e.preventDefault();
+  card.classList.add('dragging');document.body.classList.add('is-dragging');
+  const cols=[$('colL'),$('colR')];
+  let lx=e.clientX,ly=e.clientY;
+  const place=()=>{
+    const dist=c=>{const r=c.getBoundingClientRect();return [Math.max(r.left-lx,0,lx-r.right),Math.max(r.top-ly,0,ly-r.bottom)];};
+    const col=cols.map(c=>[c,dist(c)]).sort((a,b)=>a[1][0]-b[1][0]||a[1][1]-b[1][1])[0][0];
+    const others=[...col.children].filter(o=>o!==card&&o.dataset.panel);
+    const ref=others.find(o=>{const r=o.getBoundingClientRect();return ly<r.top+r.height/2;})||(col.contains($('adds'))?$('adds'):null);
+    if(card.parentNode!==col||card.nextElementSibling!==ref)col.insertBefore(card,ref);
+  };
+  const scroller=setInterval(()=>{
+    const z=70;let dy=0;
+    if(ly<z)dy=-Math.ceil((z-ly)/6);else if(ly>innerHeight-z)dy=Math.ceil((ly-innerHeight+z)/6);
+    if(dy){window.scrollBy(0,dy);place();}
+  },16);
+  const move=ev=>{lx=ev.clientX;ly=ev.clientY;place();};
+  const end=()=>{
+    clearInterval(scroller);
+    window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',end);window.removeEventListener('pointercancel',end);
+    card.classList.remove('dragging');document.body.classList.remove('is-dragging');
+    layout=cols.map(c=>[...c.children].filter(o=>o.dataset.panel).map(o=>o.dataset.panel));
+    save();drawAll();
+  };
+  window.addEventListener('pointermove',move);window.addEventListener('pointerup',end);window.addEventListener('pointercancel',end);
+}
+function cardGrip(card){
+  const g=card.querySelector('.cgrip')||document.createElement('span');
+  g.className='cgrip';g.textContent='⠿';g.title='Drag to move';
+  g.onpointerdown=e=>startPanelDrag(e,card);
+  return g;
+}
+FIXED_PANELS.forEach(k=>cardGrip(panelEl(k)));
+
 function renderPlots(){
-  const box=$('plots');box.innerHTML='';
+  document.querySelectorAll('.col > .card').forEach(c=>{if(!FIXED_PANELS.includes(c.dataset.panel))c.remove();});
   plots.forEach((pl,pi)=>{
-    const card=document.createElement('div');card.className='card';
+    if(!pl.id)pl.id='p'+(++pid);
+    const card=document.createElement('div');card.className='card';card.dataset.panel=pl.id;
     const head=document.createElement('div');head.className='phead';
+    head.append(cardGrip(card));
     pl.ys.forEach((y,si)=>{
       const w=document.createElement('span');w.className='ser';
       const sw=document.createElement('span');sw.className='sw';sw.style.background=sc(si);
@@ -779,15 +856,19 @@ function renderPlots(){
     const ml=document.createElement('label');ml.style.cssText='display:flex;align-items:center;gap:4px';
     const mc=document.createElement('input');mc.type='checkbox';mc.checked=pl.marker;mc.onchange=()=>{pl.marker=mc.checked;save();drawAll();};
     ml.append(mc,'Marker');head.append(ml);
+    const ol=document.createElement('label');ol.style.cssText='display:flex;align-items:center;gap:4px';
+    const oc=document.createElement('input');oc.type='checkbox';oc.checked=pl.origin;oc.dataset.role='origin';oc.onchange=()=>{pl.origin=oc.checked;save();drawPlot(pl);};
+    ol.append(oc,'Origin');head.append(ol);
     const fb=mkBtn('⤢','icon','Full screen',()=>toggleMax(pl));fb.dataset.role='max';fb.style.fontSize='15px';head.append(fb);
     head.append(mkBtn('✕','icon','Remove',()=>{if(pl===maxPlot)toggleMax(pl);plots.splice(pi,1);renderPlots();save();}));
     const cw=document.createElement('div');cw.className='cwrap';cw.style.height=(pl.kind==='graph'?250:64)+'px';
     const cv=document.createElement('canvas');cw.append(cv);
-    card.append(head,cw);box.append(card);
+    card.append(head,cw);
     pl._cv=cv;pl._head=head;pl._card=card;
     ro.observe(cw);
     attachZoom(pl);
   });
+  placePanels();
   if(maxPlot){
     if(plots.includes(maxPlot)){maxPlot._card.classList.add('max');const b=maxPlot._head.querySelector('[data-role=max]');b.textContent='⤡';b.title='Exit full screen';}
     else{maxPlot=null;document.body.classList.remove('has-max');if(document.fullscreenElement){try{document.exitFullscreen().catch(()=>{});}catch(e){}}}
@@ -804,7 +885,7 @@ function updatePlotSelects(){
 function addPlot(kind){
   const names=comp?comp.names:[];
   const pick=n=>names.includes(n)?n:names[names.length-1]||'';
-  plots.push({kind,x:pick('t'),ys:[pick('x')],marker:true,view:null});
+  plots.push({kind,x:pick('t'),ys:[pick('x')],marker:true,origin:false,fixed:null,view:null});
   renderPlots();save();
 }
 function unfix(pl,ax){if(!pl.fixed)return;pl.fixed[ax]=null;if(!pl.fixed.x&&!pl.fixed.y)pl.fixed=null;}
@@ -836,6 +917,14 @@ function range(vals){
   if(hi-lo<1e-12*Math.max(1,Math.abs(hi))){const d=Math.abs(hi)*0.1||1;return [lo-d,hi+d];}
   const p=(hi-lo)*0.06;return [lo-p,hi+p];
 }
+/* with origin on, 0 is in the range; if all data is on one side, 0 is the edge */
+function rangeO(vals,origin){
+  if(!origin)return range(vals);
+  let lo=Infinity,hi=-Infinity;for(const v of vals){if(v<lo)lo=v;if(v>hi)hi=v;}
+  const r=range([...vals,0]);
+  if(lo>=0)r[0]=0;else if(hi<=0)r[1]=0;
+  return r;
+}
 function colIdx(n){return comp&&comp.ok?comp.names.indexOf(n):-1;}
 
 function drawPlot(pl){
@@ -854,7 +943,7 @@ function drawPlot(pl){
     const L=12,R=12;
     let x0,x1;
     const vx=pl.view?pl.view.x:pl.fixed&&pl.fixed.x;
-    if(vx){[x0,x1]=vx;}else{const all=[];yi.forEach(i=>rows.forEach(r=>all.push(r[i])));[x0,x1]=range(all);}
+    if(vx){[x0,x1]=vx;}else{const all=[];yi.forEach(i=>rows.forEach(r=>all.push(r[i])));[x0,x1]=rangeO(all,pl.origin);}
     const X=v=>L+(v-x0)/(x1-x0)*(W-L-R),ym=Math.round(H/2)-6;
     const {ticks,step}=niceTicks(x0,x1,Math.max(2,Math.floor(W/90)));
     ctx.strokeStyle=cssv('--axis');ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(L,ym);ctx.lineTo(W-R,ym);ctx.stroke();
@@ -874,11 +963,11 @@ function drawPlot(pl){
   if(xi<0){ctx.fillStyle=cssv('--faint');ctx.textAlign='center';ctx.fillText('Choose quantities that exist in the model',W/2,H/2);return;}
   let x0,x1,y0,y1;
   const v=pl.view||pl.fixed||{};
-  if(v.x)[x0,x1]=v.x;else [x0,x1]=range(rows.map(r=>r[xi]));
+  if(v.x)[x0,x1]=v.x;else [x0,x1]=rangeO(rows.map(r=>r[xi]),pl.origin);
   if(v.y)[y0,y1]=v.y;
   else{
     const vis=[];yi.forEach(i=>rows.forEach(r=>{if(r[xi]>=x0&&r[xi]<=x1)vis.push(r[i]);}));
-    [y0,y1]=range(vis.length?vis:[0]);
+    [y0,y1]=rangeO(vis.length?vis:[0],pl.origin);
   }
   const yt=niceTicks(y0,y1,5);
   ctx.font=font;
@@ -1017,7 +1106,7 @@ async function openTask(name){
   let m;
   try{const r=await fetch(`tasks/${name}.json`,{cache:'no-cache'});if(!r.ok)throw 0;m=cleanModel(await r.json());}
   catch(e){showNote(`Couldn't open the task "${name}". Check the link.`,'err');return;}
-  guard(`the task "${m.model.title||name}"`,()=>{hideNote();applyModel(m.model,m.plots);$('example').value='custom';save();});
+  guard(`the task "${m.model.title||name}"`,()=>{hideNote();applyModel(m.model,m.plots,m.layout);$('example').value='custom';save();});
 }
 {
   const u=new URL(location.href),task=u.searchParams.get('task');

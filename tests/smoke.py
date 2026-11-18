@@ -16,6 +16,9 @@ def check(name, cond, detail=""):
 async def instant(pg):
     await pg.evaluate("document.getElementById('speed').value=100;document.getElementById('speed').dispatchEvent(new Event('input'))")
 
+async def pcard(pg, i):
+    return pg.locator(".card[data-panel=" + await pg.evaluate(f"plots[{i}].id") + "]")
+
 async def replace_if_asked(pg):
     btn = pg.locator("#note.on button:has-text('Replace')")
     if await btn.count() and await btn.is_visible():
@@ -60,17 +63,43 @@ async def main():
 
         # keep zoom: snapped range is kept, survives Reset zoom, and is saved
         await pg.evaluate("plots[0].view={x:[0.03,7.96]};drawAll()")
-        await pg.click("#plots .card >> nth=0 >> button:has-text('Keep zoom')")
+        await (await pcard(pg,0)).locator("button:has-text('Keep zoom')").click()
         fx = await pg.evaluate("plots[0].fixed")
         check("keep zoom snaps the range", fx == {"x": [0, 8], "y": None}, fx)
-        await pg.dblclick("#plots canvas >> nth=0")
+        await (await pcard(pg,0)).locator("canvas").dblclick()
         check("double-click returns to kept range", await pg.evaluate("plots[0].view===null&&plots[0].fixed.x[1]===8"))
         check("kept range is saved", await pg.evaluate("JSON.parse(localStorage.getItem('stepper-v1')).plots[0].fixed.x[1]===8"))
-        await pg.click("#plots .card >> nth=0 >> button:has-text('Auto axes')")
+        await (await pcard(pg,0)).locator("button:has-text('Auto axes')").click()
         check("auto axes clears it", await pg.evaluate("plots[0].fixed===null"))
 
+        # columns: Name, Start, Each step
+        heads = await pg.evaluate("[...document.querySelectorAll('.qhead span')].map(s=>s.textContent).filter(Boolean)")
+        check("quantity columns order", heads == ["Name", "Start", "Each step"], heads)
+        check("start is in the 2nd field", await pg.locator("#qs .qrow").nth(0).locator("input").nth(1).input_value() == "0")
+
+        # symbols
+        syms = await pg.evaluate("[...document.querySelectorAll('#syms button')].map(b=>b.textContent).join('')")
+        check("symbol bar", syms == "·²√½|()αβΔθπΣω", syms)
+
+        # origin toggle: E is always positive, so with origin its axis starts at 0
+        await (await pcard(pg,2)).locator("input[data-role=origin]").check()
+        y0 = await pg.evaluate("plots[2]._map.y0")
+        check("origin puts 0 on the axis", y0 == 0, y0)
+        check("origin is saved", await pg.evaluate("JSON.parse(localStorage.getItem('stepper-v1')).plots[2].origin===true"))
+
+        # panels: drag the first graph to the top of the left column
+        g = await (await pcard(pg, 0)).locator(".cgrip").bounding_box()
+        c = await pg.locator(".card[data-panel=consts]").bounding_box()
+        await pg.mouse.move(g["x"] + 4, g["y"] + 6); await pg.mouse.down()
+        await pg.mouse.move(c["x"] + 40, c["y"] + 10, steps=8); await pg.mouse.move(c["x"] + 40, c["y"] + 5, steps=2); await pg.mouse.up()
+        lay = await pg.evaluate("layoutSpec()")
+        check("drag moves a panel to the other column", lay[0][0] == "p0", lay)
+        check("layout is saved", await pg.evaluate("JSON.parse(localStorage.getItem('stepper-v1')).layout[0][0]==='p0'"))
+        await pg.reload(); await pg.wait_for_timeout(300)
+        check("layout survives reload", await pg.evaluate("document.getElementById('colL').firstElementChild.dataset.panel===plots[0].id"))
+
         # error messages
-        rule = pg.locator("#qs .qrow").nth(1).locator("input").nth(1)
+        rule = pg.locator("#qs .qrow").nth(1).locator("input").nth(2)
         await rule.fill("−kx − b·v"); await pg.wait_for_timeout(400)
         check("implicit-name suggestion", "Did you mean k·x" in await pg.inner_text("#err-q1"))
         await rule.fill("−k·x − b·v"); await pg.wait_for_timeout(400)
@@ -80,6 +109,14 @@ async def main():
         await pg.click("#bRun"); await pg.wait_for_timeout(200)
         st = await pg.inner_text("#status")
         check("condition stops projectile", "became false" in st and "Step 147" in st, st)
+
+        # Stop after: Never relies on the condition; switching back restores the time
+        await pg.select_option("#runUnit", "never"); await pg.wait_for_timeout(100)
+        check("never hides the number", not await pg.is_visible("#runN"))
+        await pg.click("#bReset"); await pg.click("#bRun"); await pg.wait_for_timeout(200)
+        check("never still stops on the condition", "Step 147" in await pg.inner_text("#status"))
+        await pg.select_option("#runUnit", "time"); await pg.wait_for_timeout(100)
+        check("leaving never restores the value", await pg.input_value("#runN") == "10")
 
         # parser
         vals = await pg.evaluate("""(()=>{const k=new Set(['x','v']);const e={x:-0.5,v:-2};
