@@ -744,7 +744,12 @@ function stopAll(){running=false;replaying=false;updateButtons();}
 /* Run shows a play triangle, and two bars while running (pause) */
 const ICON_PLAY='<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M4 2.5v11l9.5-5.5z" fill="currentColor"/></svg>';
 const ICON_PAUSE='<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><rect x="3.5" y="2.5" width="3" height="11" rx="0.8" fill="currentColor"/><rect x="9.5" y="2.5" width="3" height="11" rx="0.8" fill="currentColor"/></svg>';
-function updateButtons(){const b=$('bRun'),l=running?'Pause':'Run';b.innerHTML=running?ICON_PAUSE:ICON_PLAY;b.title=l;b.setAttribute('aria-label',l);$('bReplay').textContent=replaying?'Pause':'Replay';}
+function updateButtons(){const b=$('bRun'),l=running?'Pause':'Run';b.innerHTML=running?ICON_PAUSE:ICON_PLAY;b.title=l;b.setAttribute('aria-label',l);
+  /* Replay shows the pause bars while replaying, keeping its width so nothing shifts */
+  const r=$('bReplay');
+  if(replaying){if(!r.style.width)r.style.width=r.offsetWidth+'px';r.innerHTML=ICON_PAUSE;r.title='Pause';r.setAttribute('aria-label','Pause');r.style.display='inline-flex';r.style.alignItems='center';r.style.justifyContent='center';}
+  else{r.textContent='Replay';r.style.cssText='';r.removeAttribute('title');r.removeAttribute('aria-label');}
+}
 $('bStep').onclick=()=>{if(stale)return;stopAll();stopNote='';if(doStep()){follow=true;scrub=rows.length-1;}refresh();};
 $('bReset').onclick=()=>{follow=true;stopNote='';rebuild(0);};
 $('bRun').onclick=()=>{
