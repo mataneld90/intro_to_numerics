@@ -131,7 +131,7 @@ textarea{width:100%;height:120px;font-family:ui-monospace,Menlo,monospace;font-s
   <div class="ctrl">
     <button id="bStep" class="icon-btn" title="Step" aria-label="Step"></button>
     <button id="bRun" class="primary icon-btn" title="Run" aria-label="Run"></button>
-    <button id="bReplay" class="icon-btn" title="Replay" aria-label="Replay"></button>
+    <button id="bReplay">Replay</button>
     <button id="bReset">Reset</button>
     <input type="range" id="scrub" min="0" max="0" value="0" step="1" aria-label="Current step">
     <span class="status" id="status"></span>
@@ -743,17 +743,19 @@ setTimeout(downloadsNs,0);
 function stopAll(){running=false;replaying=false;updateButtons();}
 /* Run shows a play triangle, and two bars while running (pause) */
 /* control icons, drawn as inline SVG so they look the same everywhere (emoji characters don't):
-   Step = triangle with a bar (one frame forward), Run = triangle, Replay = circular arrow, pause = two bars */
+   Step = triangle with a bar (one frame forward), Run = triangle, pause = two bars.
+   Replay stays a word (a circular arrow reads as reset too) and shows the pause bars while replaying. */
 const svg=b=>`<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">${b}</svg>`;
 const ICON_STEP=svg('<path d="M3 2.5v11l8-5.5z" fill="currentColor"/><rect x="11" y="2.5" width="2.5" height="11" rx="0.8" fill="currentColor"/>');
 const ICON_PLAY=svg('<path d="M4 2.5v11l9.5-5.5z" fill="currentColor"/>');
 const ICON_PAUSE=svg('<rect x="3.5" y="2.5" width="3" height="11" rx="0.8" fill="currentColor"/><rect x="9.5" y="2.5" width="3" height="11" rx="0.8" fill="currentColor"/>');
-const ICON_REPLAY=svg('<path d="M3.2 8a4.8 4.8 0 1 0 1.5-3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M2.2 1.8v4h4z" fill="currentColor"/>');
 function setIcon(b,icon,label){b.innerHTML=icon;b.title=label;b.setAttribute('aria-label',label);}
 function updateButtons(){
   setIcon($('bStep'),ICON_STEP,'Step');
   setIcon($('bRun'),running?ICON_PAUSE:ICON_PLAY,running?'Pause':'Run');
-  setIcon($('bReplay'),replaying?ICON_PAUSE:ICON_REPLAY,replaying?'Pause':'Replay');
+  const r=$('bReplay');
+  if(replaying){if(!r.style.width)r.style.width=r.offsetWidth+'px';r.classList.add('icon-btn');setIcon(r,ICON_PAUSE,'Pause');}
+  else{r.textContent='Replay';r.style.width='';r.classList.remove('icon-btn');r.removeAttribute('title');r.removeAttribute('aria-label');}
 }
 $('bStep').onclick=()=>{if(stale)return;stopAll();stopNote='';if(doStep()){follow=true;scrub=rows.length-1;}refresh();};
 $('bReset').onclick=()=>{follow=true;stopNote='';rebuild(0);};
