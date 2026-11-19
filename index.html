@@ -40,6 +40,7 @@ button.icon{width:26px;height:26px;padding:0;border-color:transparent;color:var(
 button.icon:hover{color:var(--text)}
 button.primary{background:var(--accent);border-color:var(--accent);color:var(--panel)}
 button:disabled{opacity:.4;cursor:default}
+button.icon-btn{width:46px;padding:0;display:inline-flex;align-items:center;justify-content:center}
 button:not(.primary):disabled:hover{background:transparent}
 .crow{display:grid;grid-template-columns:30px 90px 14px minmax(0,1fr) 26px;gap:6px;align-items:center;margin:4px 0}
 .qhead,.qrow{display:grid;grid-template-columns:30px 76px minmax(0,1fr) minmax(0,2.2fr) 26px;gap:6px;align-items:center}
@@ -129,7 +130,7 @@ textarea{width:100%;height:120px;font-family:ui-monospace,Menlo,monospace;font-s
 <div class="bar" id="bar">
   <div class="ctrl">
     <button id="bStep">Step</button>
-    <button id="bRun" class="primary">Run</button>
+    <button id="bRun" class="primary icon-btn" title="Run" aria-label="Run"></button>
     <button id="bReplay">Replay</button>
     <button id="bReset">Reset</button>
     <input type="range" id="scrub" min="0" max="0" value="0" step="1" aria-label="Current step">
@@ -740,7 +741,10 @@ setTimeout(downloadsNs,0);
 
 /* ---------- run controls ---------- */
 function stopAll(){running=false;replaying=false;updateButtons();}
-function updateButtons(){$('bRun').textContent=running?'Pause':'Run';$('bReplay').textContent=replaying?'Pause':'Replay';}
+/* Run shows a play triangle, and two bars while running (pause) */
+const ICON_PLAY='<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M4 2.5v11l9.5-5.5z" fill="currentColor"/></svg>';
+const ICON_PAUSE='<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><rect x="3.5" y="2.5" width="3" height="11" rx="0.8" fill="currentColor"/><rect x="9.5" y="2.5" width="3" height="11" rx="0.8" fill="currentColor"/></svg>';
+function updateButtons(){const b=$('bRun'),l=running?'Pause':'Run';b.innerHTML=running?ICON_PAUSE:ICON_PLAY;b.title=l;b.setAttribute('aria-label',l);$('bReplay').textContent=replaying?'Pause':'Replay';}
 $('bStep').onclick=()=>{if(stale)return;stopAll();stopNote='';if(doStep()){follow=true;scrub=rows.length-1;}refresh();};
 $('bReset').onclick=()=>{follow=true;stopNote='';rebuild(0);};
 $('bRun').onclick=()=>{
