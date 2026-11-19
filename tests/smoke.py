@@ -79,7 +79,21 @@ async def main():
 
         # symbols
         syms = await pg.evaluate("[...document.querySelectorAll('#syms button')].map(b=>b.textContent).join('')")
-        check("symbol bar", syms == "·²√½°|()αβΔθπΣω", syms)
+        check("symbol bar", syms == "²√½°|()αβΔθπΣω", syms)
+
+        # typing * and ^2 gives physics notation; ^20 stays
+        f = pg.locator("#qs .qrow").nth(5).locator("input").nth(2)
+        old = await f.input_value()
+        await f.fill(""); await f.press_sequentially("m*v^2/2")
+        check("* and ^2 become · and ² while typing", await f.input_value() == "m·v²/2", await f.input_value())
+        await f.fill(""); await f.press_sequentially("x^2 + y^20")
+        check("^2 converts when followed, ^20 stays", await f.input_value() == "x² + y^20", await f.input_value())
+        await f.fill(""); await f.press_sequentially("v^3"); await f.blur(); await pg.wait_for_timeout(100)
+        check("^3 at the end converts on leaving the field", await f.input_value() == "v³", await f.input_value())
+        await f.fill(old); await pg.wait_for_timeout(300)
+        await pg.locator("#cond").press_sequentially("x*2 > 0")
+        check("while field converts too", await pg.input_value("#cond") == "x·2 > 0", await pg.input_value("#cond"))
+        await pg.fill("#cond", ""); await pg.wait_for_timeout(100)
 
         # a constant written as a formula shows its value; a plain number doesn't
         await pg.evaluate("model.consts.push({n:'w',v:'√(k/m)'});structural()"); await pg.wait_for_timeout(200)

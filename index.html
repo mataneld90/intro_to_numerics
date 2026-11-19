@@ -472,8 +472,26 @@ function rebuild(target){
 }
 
 /* ---------- model UI ---------- */
-function mkInput(val,cls,onInput){
+/* formula fields show physics notation: * becomes ·, and ^2 / ^3 become ² / ³.
+   ^2 waits for the next character (or leaving the field), so ^20 and ^2.5 stay as typed. */
+function prettyFormula(el){
+  const fix=(final)=>{
+    const v=el.value,c=el.selectionStart??v.length;
+    const m=v.slice(0,c)+'\0'+v.slice(c);
+    let t=m.replace(/\*/g,'·');
+    t=final?t.replace(/\^([23])(?![\d.,]|\0[\d.,])/g,(_,d)=>d==='2'?'²':'³')
+           :t.replace(/\^([23])(?=\0?[^\d.,\0])/g,(_,d)=>d==='2'?'²':'³');
+    if(t===m)return false;
+    const k=t.indexOf('\0');el.value=t.replace('\0','');
+    if(document.activeElement===el)el.selectionStart=el.selectionEnd=k;
+    return true;
+  };
+  el.addEventListener('input',()=>fix(false),true);
+  el.addEventListener('blur',()=>{if(fix(true))el.dispatchEvent(new Event('input'));});
+}
+function mkInput(val,cls,onInput,formula){
   const el=document.createElement('input');el.type='text';el.value=val;el.className=cls||'';el.spellcheck=false;el.autocomplete='off';
+  if(formula)prettyFormula(el);
   el.addEventListener('input',()=>{onInput(el.value);markDirty();scheduleRebuild();});
   el.addEventListener('focus',()=>lastFocus=el);
   return el;
@@ -526,7 +544,7 @@ function renderModel(){
     const eq=document.createElement('span');eq.textContent='=';eq.style.color='var(--faint)';row.append(eq);
     const vw=document.createElement('div');vw.className='cval';
     const vs=document.createElement('span');vs.id='val-c'+i;
-    vw.append(mkInput(c.v,'mono',v=>c.v=v),vs);row.append(vw);
+    vw.append(mkInput(c.v,'mono',v=>c.v=v,true),vs);row.append(vw);
     row.append(mkBtn('✕','icon','Remove constant',()=>{model.consts.splice(i,1);structural();}));
     const er=document.createElement('div');er.className='rerr';er.id='err-c'+i;
     item.append(row,er);cd.append(item);
@@ -537,8 +555,8 @@ function renderModel(){
     const row=document.createElement('div');row.className='qrow';
     row.append(mkHandle(item,qd,model.qs));
     row.append(mkInput(q.n,'mono',v=>q.n=v));
-    const s=mkInput(q.s,'mono',v=>q.s=v);s.placeholder='—';row.append(s);
-    const r=mkInput(q.r,'mono',v=>q.r=v);r.placeholder='stays the same';row.append(r);
+    const s=mkInput(q.s,'mono',v=>q.s=v,true);s.placeholder='—';row.append(s);
+    const r=mkInput(q.r,'mono',v=>q.r=v,true);r.placeholder='stays the same';row.append(r);
     row.append(mkBtn('✕','icon','Remove quantity',()=>{model.qs.splice(i,1);structural();}));
     const er=document.createElement('div');er.className='rerr';er.id='err-q'+i;
     item.append(row,er);qd.append(item);
@@ -587,7 +605,7 @@ function modelEdited(){
 }
 
 /* operators first, then Greek letters in alphabetical order; '' is a gap */
-const SYMS=['·','²','√','½','°','|','(',')','','α','β','Δ','θ','π','Σ','ω'];
+const SYMS=['²','√','½','°','|','(',')','','α','β','Δ','θ','π','Σ','ω'];
 SYMS.forEach(s=>{
   if(!s){const g=document.createElement('span');g.className='symgap';$('syms').append(g);return;}
   const b=document.createElement('button');b.textContent=s;
@@ -620,6 +638,7 @@ $('runUnit').addEventListener('change',()=>{
   else if(from&&from!==u&&dt>0)model.runN=u==='time'?+(model.runN*dt).toPrecision(6):Math.max(1,Math.min(20000,Math.round(model.runN/dt)));
   model.runUnit=u;$('runN').value=model.runN;showRunN();stopNote='';markDirty();save();refresh();
 });
+prettyFormula($('cond'));
 $('cond').addEventListener('input',()=>{model.cond=$('cond').value;markDirty();compileCond();stopNote='';save();refresh();});
 let condFn=null,condErr='',stopNote='';
 function compileCond(){

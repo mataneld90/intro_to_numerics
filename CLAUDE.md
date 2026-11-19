@@ -28,6 +28,7 @@ An earlier version gave students fixed update rules and a force menu. It was rej
 
 ## Formula language (hand-written recursive-descent parser in `compileExpr`)
 
+- Formula fields (constant values, Start, Each step, while) rewrite as you type: `*` becomes `·`, and `^2` / `^3` become `²` / `³` once the next character isn't a digit (or on leaving the field), so `^20` and `^2.5` stay. This keeps formulas looking like physics, not code (decision), so there's no `·` button. Saved files may still contain `*`; the parser accepts both.
 - Symbols are normalised: `·×∙⋅` become `*`; `−–—` become `-`; `÷`; `²` and `³`; `½`; `≥ ≤ ≠`; a decimal comma is accepted.
 - Names are Unicode letters, digits and `_`: `ΣF`, `Δt`, `θ` and `x₁` all work.
 - Implicit multiplication works: `2x`, `½m`, `2(x+1)`, `2|x|`. An unknown name that splits into known ones gets a suggestion: "Did you mean k·x?".
@@ -46,7 +47,7 @@ An earlier version gave students fixed update rules and a force menu. It was rej
 
 - The control panel stays at the top while scrolling. It holds Step, Run, Replay, Reset, the step slider, the status, the stop limit, the condition and speed.
 - **Panels:** every card (Constants, Quantities, each graph and track, Data) has a ⠿ grip in its header and can be dragged to any place in either column. The arrangement is `layout: [[left keys], [right keys]]`, with keys `consts`, `qs`, `data` and `p0`, `p1`... (plot index). It's saved with the model and in files, so a task file can set it. New graphs go to the right column above Data.
-- **Default left column:** constants and quantities. Rows are dragged by the ⠿ handle using pointer events, so mouse and touch both work. Reordering moves the *other* rows, never the dragged one, so pointer capture isn't lost. There's a symbol bar: operators `· ² √ ½ ° | ( )`, a gap, then Greek letters in alphabetical order `α β Δ θ π Σ ω`.
+- **Default left column:** constants and quantities. Rows are dragged by the ⠿ handle using pointer events, so mouse and touch both work. Reordering moves the *other* rows, never the dragged one, so pointer capture isn't lost. There's a symbol bar: operators `² √ ½ ° | ( )`, a gap, then Greek letters in alphabetical order `α β Δ θ π Σ ω`.
 - **Default right column:** graphs (any quantity against any other, up to 4 series), 1D tracks (positions on a line, with faint dots for every step and a marker for the current one), and the data table. Each graph and track has an **Origin** checkbox: automatic axes then include 0, and if all the data is on one side, 0 sits on the edge. It's saved as `origin: true`.
   - Axes never magnify rounding noise: a spread below a billionth (of 1, or of the values' size) is drawn as a constant, around 0 if it's that close to 0. Tick labels switch to powers of ten (`2e-9`, `1.5e6`) when the tick step is below 1e-4 or at least 1e5.
   - Graphs show dots only, with no connecting lines. Drag to zoom and double-click to reset.
