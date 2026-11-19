@@ -180,7 +180,9 @@ textarea{width:100%;height:120px;font-family:ui-monospace,Menlo,monospace;font-s
 const $=id=>document.getElementById(id);
 
 /* ---------- formula parser ---------- */
-const FN={sin:Math.sin,cos:Math.cos,tan:Math.tan,asin:Math.asin,acos:Math.acos,atan:Math.atan,sqrt:Math.sqrt,abs:Math.abs,sign:Math.sign,exp:Math.exp,ln:Math.log,log:Math.log10};
+/* cos(90°) is 6e-17 in floating point, not 0; trig results that tiny are rounding noise, so they become exactly 0 */
+const trig=f=>x=>{const r=f(x);return Math.abs(r)<1e-15?0:r;};
+const FN={sin:trig(Math.sin),cos:trig(Math.cos),tan:trig(Math.tan),asin:Math.asin,acos:Math.acos,atan:Math.atan,sqrt:Math.sqrt,abs:Math.abs,sign:Math.sign,exp:Math.exp,ln:Math.log,log:Math.log10};
 /* deg is one degree in radians: sin(30 deg), and asin(x)/deg gives degrees. ° is written as deg. */
 const BUILTIN={'π':Math.PI,pi:Math.PI,deg:Math.PI/180};
 const NAME_RE=/^[\p{L}_][\p{L}\p{N}_]*$/u;
@@ -932,11 +934,17 @@ function niceTicks(a,b,n){
   for(let v=Math.ceil(a/step)*step;v<=b+step*1e-9;v+=step)ticks.push(Math.abs(v)<step*1e-9?0:v);
   return {ticks,step};
 }
-function fmtTick(v,step){const d=Math.max(0,Math.min(8,-Math.floor(Math.log10(step)+1e-9)));return v.toFixed(d);}
+/* very small or very large tick steps use powers of ten (2e-9, 1.5e6) instead of rows of zeros */
+function fmtTick(v,step){
+  const ls=Math.floor(Math.log10(step)+1e-9);
+  if(step<1e-4||step>=1e5){if(v===0)return '0';return v.toExponential(Math.max(0,Math.min(6,Math.floor(Math.log10(Math.abs(v))+1e-9)-ls))).replace('e+','e');}
+  return v.toFixed(Math.max(0,Math.min(8,-ls)));
+}
 function range(vals){
   let lo=Infinity,hi=-Infinity;for(const v of vals){if(v<lo)lo=v;if(v>hi)hi=v;}
   if(!Number.isFinite(lo))return [-1,1];
-  if(hi-lo<1e-12*Math.max(1,Math.abs(hi))){const d=Math.abs(hi)*0.1||1;return [lo-d,hi+d];}
+  /* a spread below a billionth (of 1, or of the values' size) is noise: show it as a constant, and values that close to 0 as 0 */
+  if(hi-lo<1e-9*Math.max(1,Math.abs(lo),Math.abs(hi))){const m=(lo+hi)/2,d=Math.abs(m)>1e-9?Math.abs(m)*0.1:1;return [m-d,m+d];}
   const p=(hi-lo)*0.06;return [lo-p,hi+p];
 }
 /* with origin on, 0 is in the range; if all data is on one side, 0 is the edge */

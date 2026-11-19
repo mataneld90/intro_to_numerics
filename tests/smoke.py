@@ -138,6 +138,11 @@ async def main():
         degs = await pg.evaluate("""(()=>{const k=new Set(['θ']);const e={θ:30};
           return ['sin(30 deg)','sin(30°)','sin(θ deg)','2sin(θ°)','asin(0.5)/deg','cos(60deg)'].map(s=>compileExpr(s,k).f(e))})()""")
         check("degrees", [round(v, 9) for v in degs] == [0.5, 0.5, 0.5, 1, 30, 0.5], degs)
+        check("cos(90°) is exactly 0", await pg.evaluate("compileExpr('cos(90°)',new Set()).f({})") == 0)
+        r = await pg.evaluate("range([0,3e-17,6e-17,1e-16])")
+        check("noise range shows as constant", r == [-1, 1], r)
+        ticks = await pg.evaluate("[fmtTick(2e-9,1e-9),fmtTick(1.5e-9,5e-10),fmtTick(1.5e6,5e5),fmtTick(0,1e-9),fmtTick(2.5,0.5)]")
+        check("tick labels", ticks == ["2e-9", "1.5e-9", "1.5e6", "0", "2.5"], ticks)
         sug = await pg.evaluate("(()=>{try{compileExpr('sin(θdeg)',new Set(['θ']))}catch(e){return e.message}})()")
         check("θdeg suggests θ·deg", "Did you mean θ·deg" in sug, sug)
         cond = await pg.evaluate("compileExpr('|x| < 1 and v ≥ −2',new Set(['x','v']),true).f({x:-0.5,v:-2})")
