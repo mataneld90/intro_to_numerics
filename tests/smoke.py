@@ -47,6 +47,7 @@ async def main():
         kept = await pg.evaluate("rows.length===201&&rows[200][comp.names.indexOf('E')]")
         check("edit keeps the old run", kept == e_before, kept)
         check("edit blocks Run", await pg.is_disabled("#bRun") and await pg.is_disabled("#bStep"))
+        check("Reset is highlighted after an edit", await pg.evaluate("document.getElementById('bReset').classList.contains('primary')"))
         check("status says model changed", "model changed" in await pg.inner_text("#status"))
         await pg.evaluate("(()=>{const q=model.qs;const iv=q.findIndex(r=>r.n==='v'),ix=q.findIndex(r=>r.n==='x');[q[iv],q[ix]]=[q[ix],q[iv]];structural();})()")
         await pg.wait_for_timeout(300)
@@ -56,6 +57,7 @@ async def main():
 
         # row order: moving x above v (explicit Euler) makes energy grow, after Reset and Run
         await pg.click("#bReset"); await pg.wait_for_timeout(100)
+        check("Reset is plain again after Reset", not await pg.evaluate("document.getElementById('bReset').classList.contains('primary')"))
         check("reset unblocks Run", not await pg.is_disabled("#bRun"))
         await pg.click("#bRun"); await pg.wait_for_timeout(200)
         grows = await pg.evaluate("(()=>{const i=comp.names.indexOf('E');return rows[rows.length-1][i]>rows[0][i]})()")

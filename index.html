@@ -1151,6 +1151,7 @@ function refresh(){
       +(stale?(edit.ok?'  |  model changed: Reset to run it':'  |  fix the highlighted rows'):'');
   }
   $('bRun').disabled=$('bStep').disabled=stale;
+  $('bReset').classList.toggle('primary',stale); /* after an edit, Reset is the next thing to press */
   const dtMissing=edit&&edit.ok&&(model.runUnit==='time'||$('realTime').checked)&&!(dtValue()>0);
   if(typeof showSpeed==='function')showSpeed();
   $('banner').textContent=[runtimeErr,condErr,dtMissing?'Stopping after a time and running in real time need a constant named Δt (larger than 0).':''].filter(Boolean).join('  ');

@@ -41,7 +41,7 @@ An earlier version gave students fixed update rules and a force menu. It was rej
 - **While** condition (for example `y ≥ 0`): the run stops when it becomes false. Decision: the step that breaks the condition is kept, so the projectile ends slightly below the ground; that's intentional and good for class discussion.
 - The Step button ignores both limits (decision). There's a hard cap of 20,000 steps.
 - **Speed:** a logarithmic slider from 2 to 2,000 steps/s, plus Instant at the far right. The "Real time" checkbox sets the speed to 1/Δt steps/s. Both can change mid-run.
-- Editing the model does **not** recompute an existing run (decision). The old run stays on screen; Step and Run are disabled and the status adds "model changed: Reset to run it" until Reset. Errors still show immediately. Undoing the edit back to the run's model unblocks Run. If there's no run yet (only step 0), an edit recomputes step 0 straight away. In code, `comp` is the compile behind `rows`, and `edit` is the compile of the model as it is now.
+- Editing the model does **not** recompute an existing run (decision). The old run stays on screen; Step and Run are disabled and the status adds "model changed: Reset to run it" until Reset. Meanwhile Reset takes the purple primary style, so the next button to press stands out (decision: not red, since red means error here). Errors still show immediately. Undoing the edit back to the run's model unblocks Run. If there's no run yet (only step 0), an edit recomputes step 0 straight away. In code, `comp` is the compile behind `rows`, and `edit` is the compile of the model as it is now.
 
 ## Interface
 
