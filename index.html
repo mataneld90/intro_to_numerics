@@ -187,7 +187,9 @@ const FN={sin:trig(Math.sin),cos:trig(Math.cos),tan:trig(Math.tan),asin:Math.asi
 const BUILTIN={'π':Math.PI,pi:Math.PI,deg:Math.PI/180};
 const NAME_RE=/^[\p{L}_][\p{L}\p{N}_]*$/u;
 class UErr extends Error{}
-function normalize(s){return s.replace(/≥/g,'>=').replace(/≤/g,'<=').replace(/≠/g,'!=').replace(/&&/g,' and ').replace(/[·×∙⋅]/g,'*').replace(/[−–—]/g,'-').replace(/÷/g,'/').replace(/²/g,'^2').replace(/³/g,'^3').replace(/½/g,'(1/2)').replace(/°/g,' deg ').replace(/,/g,'.');}
+const SUP='⁰¹²³⁴⁵⁶⁷⁸⁹',SUP_IN={'⁻':'-'};[...SUP].forEach((ch,i)=>SUP_IN[ch]=String(i));
+const toSup=n=>[...n].map(ch=>ch==='-'?'⁻':SUP[+ch]).join('');
+function normalize(s){return s.replace(/≥/g,'>=').replace(/≤/g,'<=').replace(/≠/g,'!=').replace(/&&/g,' and ').replace(/[·×∙⋅]/g,'*').replace(/[−–—]/g,'-').replace(/÷/g,'/').replace(/⁻?[⁰¹²³⁴⁵⁶⁷⁸⁹]+/g,m=>'^('+[...m].map(ch=>SUP_IN[ch]).join('')+')').replace(/½/g,'(1/2)').replace(/°/g,' deg ').replace(/,/g,'.');}
 function tokenize(s){
   const out=[];let i=0;
   while(i<s.length){
@@ -472,15 +474,15 @@ function rebuild(target){
 }
 
 /* ---------- model UI ---------- */
-/* formula fields show physics notation: * becomes ·, and ^2 / ^3 become ² / ³.
-   ^2 waits for the next character (or leaving the field), so ^20 and ^2.5 stay as typed. */
+/* formula fields show physics notation: * becomes ·, and a whole-number power ^7, ^20, ^-3 becomes ⁷, ²⁰, ⁻³.
+   The power waits for the next character (or leaving the field), so ^20 isn't cut to ²0 and ^2.5 stays as typed. */
 function prettyFormula(el){
   const fix=(final)=>{
     const v=el.value,c=el.selectionStart??v.length;
     const m=v.slice(0,c)+'\0'+v.slice(c);
     let t=m.replace(/\*/g,'·');
-    t=final?t.replace(/\^([23])(?![\d.,]|\0[\d.,])/g,(_,d)=>d==='2'?'²':'³')
-           :t.replace(/\^([23])(?=\0?[^\d.,\0])/g,(_,d)=>d==='2'?'²':'³');
+    t=final?t.replace(/\^(-?\d+)(?![\d.,]|\0[\d.,])/g,(_,d)=>toSup(d))
+           :t.replace(/\^(-?\d+)(?=\0?[^\d.,\0])/g,(_,d)=>toSup(d));
     if(t===m)return false;
     const k=t.indexOf('\0');el.value=t.replace('\0','');
     if(document.activeElement===el)el.selectionStart=el.selectionEnd=k;

@@ -28,7 +28,7 @@ An earlier version gave students fixed update rules and a force menu. It was rej
 
 ## Formula language (hand-written recursive-descent parser in `compileExpr`)
 
-- Formula fields (constant values, Start, Each step, while) rewrite as you type: `*` becomes `·`, and `^2` / `^3` become `²` / `³` once the next character isn't a digit (or on leaving the field), so `^20` and `^2.5` stay. This keeps formulas looking like physics, not code (decision), so there's no `·` button. Saved files may still contain `*`; the parser accepts both.
+- Formula fields (constant values, Start, Each step, while) rewrite as you type: `*` becomes `·`, and any whole-number power becomes superscript (`^7` → `⁷`, `^20` → `²⁰`, `^-3` → `⁻³`) once the next character isn't a digit or a point (or on leaving the field); decimal powers like `^2.5` stay as typed. The parser reads any run of superscript digits, with an optional `⁻`, as a power. This keeps formulas looking like physics, not code (decision), so there's no `·` button. Saved files may still contain `*`; the parser accepts both.
 - Symbols are normalised: `·×∙⋅` become `*`; `−–—` become `-`; `÷`; `²` and `³`; `½`; `≥ ≤ ≠`; a decimal comma is accepted.
 - Names are Unicode letters, digits and `_`: `ΣF`, `Δt`, `θ` and `x₁` all work.
 - Implicit multiplication works: `2x`, `½m`, `2(x+1)`, `2|x|`. An unknown name that splits into known ones gets a suggestion: "Did you mean k·x?".
