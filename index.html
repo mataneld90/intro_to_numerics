@@ -181,10 +181,11 @@ const $=id=>document.getElementById(id);
 
 /* ---------- formula parser ---------- */
 const FN={sin:Math.sin,cos:Math.cos,tan:Math.tan,asin:Math.asin,acos:Math.acos,atan:Math.atan,sqrt:Math.sqrt,abs:Math.abs,sign:Math.sign,exp:Math.exp,ln:Math.log,log:Math.log10};
-const BUILTIN={'π':Math.PI,pi:Math.PI};
+/* deg is one degree in radians: sin(30 deg), and asin(x)/deg gives degrees. ° is written as deg. */
+const BUILTIN={'π':Math.PI,pi:Math.PI,deg:Math.PI/180};
 const NAME_RE=/^[\p{L}_][\p{L}\p{N}_]*$/u;
 class UErr extends Error{}
-function normalize(s){return s.replace(/≥/g,'>=').replace(/≤/g,'<=').replace(/≠/g,'!=').replace(/&&/g,' and ').replace(/[·×∙⋅]/g,'*').replace(/[−–—]/g,'-').replace(/÷/g,'/').replace(/²/g,'^2').replace(/³/g,'^3').replace(/½/g,'(1/2)').replace(/,/g,'.');}
+function normalize(s){return s.replace(/≥/g,'>=').replace(/≤/g,'<=').replace(/≠/g,'!=').replace(/&&/g,' and ').replace(/[·×∙⋅]/g,'*').replace(/[−–—]/g,'-').replace(/÷/g,'/').replace(/²/g,'^2').replace(/³/g,'^3').replace(/½/g,'(1/2)').replace(/°/g,' deg ').replace(/,/g,'.');}
 function tokenize(s){
   const out=[];let i=0;
   while(i<s.length){
@@ -306,7 +307,7 @@ const EXAMPLES={
     runN:20,runUnit:'time',cond:'',plots:[{kind:'graph',x:'t',ys:['x'],marker:true},{kind:'track',ys:['x'],marker:true},{kind:'graph',x:'t',ys:['E'],marker:true}]},
   projectile:{consts:[{n:'g',v:'9.8'},{n:'m',v:'0.5'},{n:'c',v:'0.01'},{n:'v0',v:'25'},{n:'θ',v:'45'},{n:'Δt',v:'0.02'}],
     qs:[{n:'t',s:'0',r:'t + Δt'},{n:'speed',s:'',r:'√(vx² + vy²)'},{n:'Fx',s:'',r:'−c·speed·vx'},{n:'Fy',s:'',r:'−m·g − c·speed·vy'},
-        {n:'vx',s:'v0·cos(θ·π/180)',r:'vx + Fx/m·Δt'},{n:'vy',s:'v0·sin(θ·π/180)',r:'vy + Fy/m·Δt'},{n:'x',s:'0',r:'x + vx·Δt'},{n:'y',s:'0',r:'y + vy·Δt'}],
+        {n:'vx',s:'v0·cos(θ deg)',r:'vx + Fx/m·Δt'},{n:'vy',s:'v0·sin(θ deg)',r:'vy + Fy/m·Δt'},{n:'x',s:'0',r:'x + vx·Δt'},{n:'y',s:'0',r:'y + vy·Δt'}],
     runN:10,runUnit:'time',cond:'y ≥ 0',plots:[{kind:'graph',x:'x',ys:['y'],marker:true},{kind:'graph',x:'t',ys:['vx','vy'],marker:true}]},
   two:{consts:[{n:'m',v:'1'},{n:'k',v:'10'},{n:'Δt',v:'0.02'}],
     qs:[{n:'t',s:'0',r:'t + Δt'},{n:'F1',s:'',r:'−k·x1 + k·(x2 − x1)'},{n:'F2',s:'',r:'−k·(x2 − x1) − k·x2'},{n:'v1',s:'0',r:'v1 + F1/m·Δt'},{n:'v2',s:'0',r:'v2 + F2/m·Δt'},
@@ -361,7 +362,7 @@ function compileModel(){
   const checkName=(n,key)=>{
     if(!n){errs[key]=errs[key]||'Give it a name.';return false;}
     if(!NAME_RE.test(n)){errs[key]=errs[key]||`"${n}" can't be a name. Use letters, digits and _, starting with a letter.`;return false;}
-    if(FN[n]||n in BUILTIN){errs[key]=errs[key]||`"${n}" is already taken by a built-in function.`;return false;}
+    if(FN[n]||n in BUILTIN){errs[key]=errs[key]||`"${n}" is already taken by a built-in ${FN[n]?'function':'value'}.`;return false;}
     if(seen.has(n)){errs[key]=errs[key]||`"${n}" is used twice.`;return false;}
     seen.set(n,key);return true;
   };
@@ -584,7 +585,7 @@ function modelEdited(){
 }
 
 /* operators first, then Greek letters in alphabetical order; '' is a gap */
-const SYMS=['·','²','√','½','|','(',')','','α','β','Δ','θ','π','Σ','ω'];
+const SYMS=['·','²','√','½','°','|','(',')','','α','β','Δ','θ','π','Σ','ω'];
 SYMS.forEach(s=>{
   if(!s){const g=document.createElement('span');g.className='symgap';$('syms').append(g);return;}
   const b=document.createElement('button');b.textContent=s;

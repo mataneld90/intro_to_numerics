@@ -31,7 +31,7 @@ An earlier version gave students fixed update rules and a force menu. It was rej
 - Symbols are normalised: `·×∙⋅` become `*`; `−–—` become `-`; `÷`; `²` and `³`; `½`; `≥ ≤ ≠`; a decimal comma is accepted.
 - Names are Unicode letters, digits and `_`: `ΣF`, `Δt`, `θ` and `x₁` all work.
 - Implicit multiplication works: `2x`, `½m`, `2(x+1)`, `2|x|`. An unknown name that splits into known ones gets a suggestion: "Did you mean k·x?".
-- `|x|` is absolute value and can be nested. `√` is a prefix operator. Available functions: sin cos tan asin acos atan sqrt abs sign exp ln log. `π` and `pi` are built in.
+- `|x|` is absolute value and can be nested. `√` is a prefix operator. Available functions: sin cos tan asin acos atan sqrt abs sign exp ln log. `π` and `pi` are built in, and so is `deg` = π/180 (decision, instead of dsin/dcos/dtan): `sin(30 deg)`, `v0·cos(θ deg)`, and `asin(x)/deg` gives degrees. `°` is normalised to ` deg `, so `sin(30°)` works too. Students type `deg` without the mouse; `θdeg` gets "Did you mean θ·deg?".
 - Comparisons (`> < >= <= == !=`, `=`) and `and`/`or` are allowed only in the run condition. Using them in a rule gives an explanatory error. `||` is not "or", because `|` means absolute value.
 
 ## Running
@@ -46,7 +46,7 @@ An earlier version gave students fixed update rules and a force menu. It was rej
 
 - The control panel stays at the top while scrolling. It holds Step, Run, Replay, Reset, the step slider, the status, the stop limit, the condition and speed.
 - **Panels:** every card (Constants, Quantities, each graph and track, Data) has a ⠿ grip in its header and can be dragged to any place in either column. The arrangement is `layout: [[left keys], [right keys]]`, with keys `consts`, `qs`, `data` and `p0`, `p1`... (plot index). It's saved with the model and in files, so a task file can set it. New graphs go to the right column above Data.
-- **Default left column:** constants and quantities. Rows are dragged by the ⠿ handle using pointer events, so mouse and touch both work. Reordering moves the *other* rows, never the dragged one, so pointer capture isn't lost. There's a symbol bar: operators `· ² √ ½ | ( )`, a gap, then Greek letters in alphabetical order `α β Δ θ π Σ ω`.
+- **Default left column:** constants and quantities. Rows are dragged by the ⠿ handle using pointer events, so mouse and touch both work. Reordering moves the *other* rows, never the dragged one, so pointer capture isn't lost. There's a symbol bar: operators `· ² √ ½ ° | ( )`, a gap, then Greek letters in alphabetical order `α β Δ θ π Σ ω`.
 - **Default right column:** graphs (any quantity against any other, up to 4 series), 1D tracks (positions on a line, with faint dots for every step and a marker for the current one), and the data table. Each graph and track has an **Origin** checkbox: automatic axes then include 0, and if all the data is on one side, 0 sits on the edge. It's saved as `origin: true`.
   - Graphs show dots only, with no connecting lines. Drag to zoom and double-click to reset.
   - **Keep zoom** (shown while zoomed) makes the zoom the graph's fixed axis range (`fixed: {x, y}`, `y` null for an x-only zoom), snapped to round numbers (0.03–7.96 becomes 0–8). Reset zoom and double-click return to it; **Auto axes** clears it. Changing a graph's quantity clears that axis. Saved in files, so a task file can preset axes. Full screen fills the window below the control panel, so the controls stay usable.

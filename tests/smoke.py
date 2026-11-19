@@ -79,7 +79,7 @@ async def main():
 
         # symbols
         syms = await pg.evaluate("[...document.querySelectorAll('#syms button')].map(b=>b.textContent).join('')")
-        check("symbol bar", syms == "·²√½|()αβΔθπΣω", syms)
+        check("symbol bar", syms == "·²√½°|()αβΔθπΣω", syms)
 
         # a constant written as a formula shows its value; a plain number doesn't
         await pg.evaluate("model.consts.push({n:'w',v:'√(k/m)'});structural()"); await pg.wait_for_timeout(200)
@@ -135,6 +135,11 @@ async def main():
         vals = await pg.evaluate("""(()=>{const k=new Set(['x','v']);const e={x:-0.5,v:-2};
           return ['|x|','2|x|','||x|−1|','√|x|','½·v²','2(x+1)'].map(s=>compileExpr(s,k).f(e))})()""")
         check("parser values", [round(v, 6) for v in vals] == [0.5, 1, 0.5, 0.707107, 2, 1], vals)
+        degs = await pg.evaluate("""(()=>{const k=new Set(['θ']);const e={θ:30};
+          return ['sin(30 deg)','sin(30°)','sin(θ deg)','2sin(θ°)','asin(0.5)/deg','cos(60deg)'].map(s=>compileExpr(s,k).f(e))})()""")
+        check("degrees", [round(v, 9) for v in degs] == [0.5, 0.5, 0.5, 1, 30, 0.5], degs)
+        sug = await pg.evaluate("(()=>{try{compileExpr('sin(θdeg)',new Set(['θ']))}catch(e){return e.message}})()")
+        check("θdeg suggests θ·deg", "Did you mean θ·deg" in sug, sug)
         cond = await pg.evaluate("compileExpr('|x| < 1 and v ≥ −2',new Set(['x','v']),true).f({x:-0.5,v:-2})")
         check("condition parser", cond == 1)
 
