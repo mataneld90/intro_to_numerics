@@ -113,17 +113,19 @@ textarea{width:100%;height:120px;font-family:ui-monospace,Menlo,monospace;font-s
 <header>
   <div class="ttl"><h1>Step by step</h1><input type="text" id="title" placeholder="Untitled model" spellcheck="false" autocomplete="off" aria-label="Model name"></div>
   <div class="hact">
-  <button id="bOpen">Open</button><button id="bSave">Save</button>
+  <button id="bNew">New</button><button id="bOpen">Open</button><button id="bSave">Save</button>
   <input type="file" id="fileIn" accept=".json,application/json,.txt" hidden>
-  <label style="font-size:13px;color:var(--muted)">Example
-    <select id="example">
-      <option value="custom" hidden>Your model</option>
-      <option value="blank">Blank</option>
+  <select id="example" aria-label="Examples and tasks">
+    <option value="custom" hidden>Examples and tasks</option>
+    <optgroup label="Examples">
       <option value="spring">Spring with friction</option>
       <option value="projectile">Projectile with air drag</option>
       <option value="two">Two masses, three springs</option>
-    </select>
-  </label>
+    </optgroup>
+    <optgroup label="Tasks">
+      <option value="task:falling-ball">Task B: a falling ball</option>
+    </optgroup>
+  </select>
   </div>
 </header>
 <div class="note" id="note"></div>
@@ -306,7 +308,8 @@ function compileExpr(src,known,cond){
 
 /* ---------- examples ---------- */
 const EXAMPLES={
-  blank:{consts:[{n:'Δt',v:'0.1'}],qs:[{n:'t',s:'0',r:'t + Δt'}],runN:100,runUnit:'steps',cond:'',plots:[{kind:'graph',x:'t',ys:['t'],marker:true}]},
+  /* New: a blank model with only the Data panel; graphs are added by hand */
+  blank:{consts:[{n:'Δt',v:'0.1'}],qs:[{n:'t',s:'0',r:'t + Δt'}],runN:100,runUnit:'steps',cond:'',plots:[]},
   spring:{consts:[{n:'m',v:'1'},{n:'k',v:'4'},{n:'b',v:'0.3'},{n:'Δt',v:'0.1'}],
     qs:[{n:'t',s:'0',r:'t + Δt'},{n:'ΣF',s:'',r:'−k·x − b·v'},{n:'a',s:'',r:'ΣF / m'},{n:'v',s:'0',r:'v + a·Δt'},{n:'x',s:'1',r:'x + v·Δt'},{n:'E',s:'',r:'½·m·v² + ½·k·x²'}],
     runN:20,runUnit:'time',cond:'',plots:[{kind:'graph',x:'t',ys:['x'],marker:true},{kind:'track',ys:['x'],marker:true},{kind:'graph',x:'t',ys:['E'],marker:true}]},
@@ -330,7 +333,7 @@ const EX_TITLES={blank:'',spring:'Spring with friction',projectile:'Projectile w
 function loadExample(key){
   const ex=clone(EXAMPLES[key]);
   applyModel({title:EX_TITLES[key]||'',consts:ex.consts,qs:ex.qs,runN:ex.runN,runUnit:ex.runUnit,cond:ex.cond},ex.plots);
-  $('example').value=key;
+  $('example').value=key==='blank'?'custom':key;
 }
 function applyModel(m,pl,lay){
   model=m;
@@ -537,6 +540,16 @@ function startDrag(e,handle,item,list,arr){
   };
   window.addEventListener('pointermove',move);window.addEventListener('pointerup',end);window.addEventListener('pointercancel',end);
 }
+/* Enter in any field of a constant or quantity row inserts an empty row below it and focuses its name.
+   Listeners attach on the row, so fields appended later in the row are covered too. */
+function enterAddsRow(row,list,arr,i,blank){
+  row.addEventListener('keydown',e=>{
+    if(e.key!=='Enter'||e.isComposing||e.target.tagName!=='INPUT')return;
+    e.preventDefault();e.target.blur();
+    arr.splice(i+1,0,blank());structural();
+    list.children[i+1]?.querySelector('input')?.focus();
+  });
+}
 function renderModel(){
   const cd=$('consts');cd.innerHTML='';
   model.consts.forEach((c,i)=>{
@@ -544,6 +557,7 @@ function renderModel(){
     const row=document.createElement('div');row.className='crow';
     row.append(mkHandle(item,cd,model.consts));
     row.append(mkInput(c.n,'mono',v=>c.n=v));
+    enterAddsRow(row,cd,model.consts,i,()=>({n:'',v:''}));
     const eq=document.createElement('span');eq.textContent='=';eq.style.color='var(--faint)';row.append(eq);
     const vw=document.createElement('div');vw.className='cval';
     const vs=document.createElement('span');vs.id='val-c'+i;
@@ -558,6 +572,7 @@ function renderModel(){
     const row=document.createElement('div');row.className='qrow';
     row.append(mkHandle(item,qd,model.qs));
     row.append(mkInput(q.n,'mono',v=>q.n=v));
+    enterAddsRow(row,qd,model.qs,i,()=>({n:'',s:'',r:''}));
     const s=mkInput(q.s,'mono',v=>q.s=v,true);s.placeholder='—';row.append(s);
     const r=mkInput(q.r,'mono',v=>q.r=v,true);r.placeholder='stays the same';row.append(r);
     row.append(mkBtn('✕','icon','Remove quantity',()=>{model.qs.splice(i,1);structural();}));
@@ -675,8 +690,10 @@ $('example').addEventListener('change',e=>{
   const key=e.target.value;if(key==='custom')return;
   const label=e.target.options[e.target.selectedIndex].text;
   if(dirty)$('example').value=lastExample;
+  if(key.startsWith('task:')){openTask(key.slice(5));return;}
   guard(`the "${label}" example`,()=>{hideNote();loadExample(key);save();});
 });
+$('bNew').onclick=()=>guard('a new blank model',()=>{hideNote();loadExample('blank');save();});
 $('title').addEventListener('input',()=>{model.title=$('title').value;dirty=true;save();});
 
 /* ---------- files ---------- */
@@ -695,7 +712,7 @@ function cleanModel(o){
   const rng=a=>Array.isArray(a)&&a.length===2&&a.every(Number.isFinite)&&a[0]<a[1]?[a[0],a[1]]:null;
   const fixed=f=>{if(!f)return null;const x=rng(f.x),y=rng(f.y);return x||y?{x,y}:null;};
   let pl=Array.isArray(o.plots)?o.plots.filter(p=>p&&Array.isArray(p.ys)&&p.ys.length).map(p=>({kind:p.kind==='track'?'track':'graph',x:str(p.x||'t'),ys:p.ys.slice(0,4).map(str),marker:p.marker!==false,origin:p.origin===true,fixed:fixed(p.fixed)})):[];
-  if(!pl.length)pl=[{kind:'graph',x:'t',ys:[m.qs[m.qs.length-1]?.n||'t'],marker:true}];
+  if(!Array.isArray(o.plots))pl=[{kind:'graph',x:'t',ys:[m.qs[m.qs.length-1]?.n||'t'],marker:true}];
   const lay=Array.isArray(o.layout)&&o.layout.length===2&&o.layout.every(c=>Array.isArray(c))?o.layout.map(c=>c.map(str)):null;
   return {model:m,plots:pl,layout:lay};
 }
@@ -1169,13 +1186,13 @@ $('bCsv').onclick=()=>{
 window.addEventListener('resize',drawAll);
 
 /* ---------- start ---------- */
-if(!restore())loadExample('spring');
+if(!restore())loadExample('blank');
 async function openTask(name){
   if(!/^[\w-]+$/.test(name)){showNote(`"${name}" isn't a task name.`,'err');return;}
   let m;
   try{const r=await fetch(`tasks/${name}.json`,{cache:'no-cache'});if(!r.ok)throw 0;m=cleanModel(await r.json());}
   catch(e){showNote(`Couldn't open the task "${name}". Check the link.`,'err');return;}
-  guard(`the task "${m.model.title||name}"`,()=>{hideNote();applyModel(m.model,m.plots,m.layout);$('example').value='custom';save();});
+  guard(`the task "${m.model.title||name}"`,()=>{hideNote();applyModel(m.model,m.plots,m.layout);const o=$('example').querySelector(`option[value="task:${name}"]`);$('example').value=o?o.value:'custom';save();});
 }
 {
   const u=new URL(location.href),task=u.searchParams.get('task');

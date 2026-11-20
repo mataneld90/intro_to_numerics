@@ -34,6 +34,19 @@ async def main():
         await pg.goto(PAGE); await pg.evaluate("localStorage.clear()"); await pg.reload(); await pg.wait_for_timeout(300)
         await instant(pg)
 
+        # first visit is a blank model: only the Data panel, no graphs
+        check("first visit is blank", await pg.evaluate("model.qs.length===1&&plots.length===0"))
+        check("blank shows only Data", await pg.evaluate("[...document.querySelectorAll('.col > .card')].map(c=>c.dataset.panel).join()") == "consts,qs,data")
+        check("dropdown has no Blank", await pg.evaluate("!document.querySelector('#example option[value=blank]')"))
+
+        # Enter adds an empty row below and focuses its name
+        await pg.locator("#consts .crow").nth(0).locator("input").nth(1).press("Enter"); await pg.wait_for_timeout(100)
+        check("Enter adds a constant row", await pg.evaluate("model.consts.length===2&&model.consts[1].n===''&&document.activeElement===document.querySelectorAll('#consts .crow')[1].querySelector('input')"))
+        await pg.locator("#qs .qrow").nth(0).locator("input").nth(2).press("Enter"); await pg.wait_for_timeout(100)
+        check("Enter adds a quantity row", await pg.evaluate("model.qs.length===2&&model.qs[1].n===''"))
+
+        await pg.select_option("#example", "spring"); await pg.wait_for_timeout(200); await replace_if_asked(pg)
+
         # default layout: Data at the top of the right column; the table shows 6 rows, then scrolls
         check("Data is top right", await pg.evaluate("document.getElementById('colR').firstElementChild.dataset.panel") == "data")
         await pg.click("#bRun"); await pg.wait_for_timeout(300)
@@ -207,6 +220,12 @@ async def main():
         check("task link asks before replacing work", await pg.locator("#note.on button:has-text('Replace')").count() == 1)
         await pg.click("#note button:has-text('Cancel')")
         check("cancel keeps the work", await pg.input_value("#title") == "Student work")
+        await pg.goto(base + "?task=nope"); await pg.wait_for_timeout(500)
+        await pg.goto(base); await pg.wait_for_timeout(300)
+        await pg.select_option("#example", "task:falling-ball"); await pg.wait_for_timeout(500); await replace_if_asked(pg)
+        check("Task B from the dropdown", await pg.input_value("#title") == "Task B: a falling ball" and await pg.input_value("#example") == "task:falling-ball")
+        await pg.click("#bNew"); await pg.wait_for_timeout(200); await replace_if_asked(pg)
+        check("New gives a blank model", await pg.evaluate("model.qs.length===1&&plots.length===0") and await pg.input_value("#title") == "")
         await pg.goto(base + "?task=nope"); await pg.wait_for_timeout(500)
         check("missing task shows an error", "Couldn't open the task" in await pg.inner_text("#note"))
         srv.shutdown()
