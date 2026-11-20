@@ -104,7 +104,7 @@ tbody tr[data-k]:hover td{background:var(--hover)}
 tr.pad td{padding:0;border:0}
 th{color:var(--muted);font-weight:400}
 tr.cur td{background:var(--accent-bg);color:var(--accent)}
-.tscroll{overflow:auto;max-height:340px;overscroll-behavior:contain}
+.tscroll{overflow:auto;max-height:178px;overscroll-behavior:contain}
 textarea{width:100%;height:120px;font-family:ui-monospace,Menlo,monospace;font-size:12px;background:var(--panel);color:var(--text);border:1px solid var(--line2);border-radius:6px;margin-top:8px}
 </style>
 </head>
@@ -834,16 +834,16 @@ let layout=null,pid=0;
 const FIXED_PANELS=['consts','qs','data'];
 function layoutSpec(){return layout?layout.map(c=>c.map(k=>{const i=plots.findIndex(p=>p.id===k);return i>=0?'p'+i:k;})):null;}
 function layoutFromSpec(spec){
-  if(!spec)return [['consts','qs'],[...plots.map(p=>p.id),'data']];
+  if(!spec)return [['consts','qs'],['data',...plots.map(p=>p.id)]];
   return spec.map(c=>c.map(k=>{const m=/^p(\d+)$/.exec(k);return m?(plots[+m[1]]?.id||''):k;}));
 }
 function fixLayout(){
   const keys=new Set([...FIXED_PANELS,...plots.map(p=>p.id)]),seen=new Set();
   layout=layout.map(c=>c.filter(k=>keys.has(k)&&!seen.has(k)&&seen.add(k)));
-  for(const p of plots)if(!seen.has(p.id)){const R=layout[1],d=R.indexOf('data');R.splice(d<0?R.length:d,0,p.id);}
+  for(const p of plots)if(!seen.has(p.id))layout[1].push(p.id);
   if(!seen.has('consts'))layout[0].unshift('consts');
   if(!seen.has('qs'))layout[0].splice(layout[0].indexOf('consts')+1,0,'qs');
-  if(!seen.has('data'))layout[1].push('data');
+  if(!seen.has('data'))layout[1].unshift('data');
 }
 function panelEl(k){return FIXED_PANELS.includes(k)?document.querySelector(`.card[data-panel=${k}]`):plots.find(p=>p.id===k)?._card;}
 function placePanels(){
@@ -1112,7 +1112,7 @@ new ResizeObserver(setBarH).observe($('bar'));window.addEventListener('resize',s
 
 /* ---------- table, status ---------- */
 function fmt(v){if(v===0)return '0';const a=Math.abs(v);if(a>=1e5||a<1e-3)return v.toExponential(3);return String(+v.toPrecision(4));}
-let RH=25,HEAD=26,tblRaf=0;
+let RH=25,HEAD=26,tblRaf=0;const TABLE_ROWS=6;
 function renderTable(follow,depth=0){
   const t=$('tbl'),box=$('tscroll');
   if(!comp||!comp.ok||!rows.length){t.innerHTML='';return;}
@@ -1134,6 +1134,8 @@ function renderTable(follow,depth=0){
   const nr=r?r.getBoundingClientRect().height:RH,nh=th?th.getBoundingClientRect().height:HEAD;
   if(!(nr>4)||!(nh>4))return;
   const changed=Math.abs(nr-RH)>0.5||Math.abs(nh-HEAD)>0.5;RH=nr;HEAD=nh;
+  /* the table shows TABLE_ROWS rows, then scrolls (a horizontal scrollbar's height is added) */
+  const mh=Math.ceil(HEAD+TABLE_ROWS*RH+(box.offsetHeight-box.clientHeight))+'px';if(box.style.maxHeight!==mh)box.style.maxHeight=mh;
   if(changed||Math.max(RH,box.clientHeight-HEAD)!==vh)renderTable(follow,depth+1);
 }
 new ResizeObserver(()=>renderTable(false)).observe($('tscroll'));

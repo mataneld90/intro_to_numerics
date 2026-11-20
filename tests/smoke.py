@@ -34,6 +34,13 @@ async def main():
         await pg.goto(PAGE); await pg.evaluate("localStorage.clear()"); await pg.reload(); await pg.wait_for_timeout(300)
         await instant(pg)
 
+        # default layout: Data at the top of the right column; the table shows 6 rows, then scrolls
+        check("Data is top right", await pg.evaluate("document.getElementById('colR').firstElementChild.dataset.panel") == "data")
+        await pg.click("#bRun"); await pg.wait_for_timeout(300)
+        vis = await pg.evaluate("(()=>{const b=document.getElementById('tscroll');return (b.clientHeight-HEAD)/RH})()")
+        check("table shows 6 rows", 5.8 < vis < 6.4, vis)
+        await pg.click("#bReset"); await pg.wait_for_timeout(100)
+
         # spring example: 20 s at dt 0.1 = 200 steps; energy never rises (friction)
         await pg.click("#bRun"); await pg.wait_for_timeout(200)
         check("spring runs 200 steps", "Step 200 of 200" in await pg.inner_text("#status"))
