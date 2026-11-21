@@ -35,6 +35,7 @@ async def main():
         await instant(pg)
 
         # first visit is a blank model: only the Data panel, no graphs
+        check("no previous run on a first visit", not await pg.is_visible("#prevWrap"))
         check("first visit is blank", await pg.evaluate("model.qs.length===1&&plots.length===0"))
         check("blank shows only Data", await pg.evaluate("[...document.querySelectorAll('.col > .card')].map(c=>c.dataset.panel).join()") == "consts,qs,data")
         check("dropdown has no Blank", await pg.evaluate("!document.querySelector('#example option[value=blank]')"))
@@ -82,6 +83,21 @@ async def main():
         await pg.click("#bRun"); await pg.wait_for_timeout(200)
         grows = await pg.evaluate("(()=>{const i=comp.names.indexOf('E');return rows[rows.length-1][i]>rows[0][i]})()")
         check("explicit Euler gains energy", grows)
+
+        # previous run: Reset keeps the discarded run, drawn faded on graphs; loading another model clears it
+        n_before = await pg.evaluate("rows.length")
+        await pg.evaluate("model.consts.find(c=>c.n==='b').v='0';structural()"); await pg.wait_for_timeout(100)
+        await pg.click("#bReset"); await pg.click("#bRun"); await pg.wait_for_timeout(300)
+        check("Reset keeps the previous run", await pg.evaluate("prev&&prev.rows.length") == n_before)
+        check("Previous run checkbox shows", await pg.is_visible("#prevWrap") and await pg.is_checked("#showPrev"))
+        check("previous run is drawn on matching graphs", await pg.evaluate("prevPairs(plots[0]).length===1&&prevPairs(plots[2]).length===1"))
+        await pg.click("#bReset"); await pg.wait_for_timeout(100)
+        check("a second Reset doesn't replace it with an empty run", await pg.evaluate("prev.rows.length") > 1)
+        await pg.click("#bRun"); await pg.wait_for_timeout(300)
+        await pg.uncheck("#showPrev")
+        check("unchecking hides it", await pg.evaluate("prevPairs(plots[0]).length===0"))
+        await pg.check("#showPrev")
+        await pg.evaluate("model.consts.find(c=>c.n==='b').v='0.3';structural()"); await pg.click("#bReset"); await pg.click("#bRun"); await pg.wait_for_timeout(300)
 
         # keep zoom: snapped range is kept, survives Reset zoom, and is saved
         await pg.evaluate("plots[0].view={x:[0.03,7.96]};drawAll()")
@@ -160,6 +176,7 @@ async def main():
 
         # projectile with while y >= 0
         await pg.select_option("#example", "projectile"); await pg.wait_for_timeout(200); await replace_if_asked(pg)
+        check("loading another model clears the previous run", await pg.evaluate("prev===null") and not await pg.is_visible("#prevWrap"))
         await pg.click("#bRun"); await pg.wait_for_timeout(200)
         st = await pg.inner_text("#status")
         check("condition stops projectile", "became false" in st and "Step 147" in st, st)
