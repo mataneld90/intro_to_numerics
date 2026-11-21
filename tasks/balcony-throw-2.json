@@ -1,0 +1,7 @@
+{"app":"step-by-step","version":1,
+ "model":{"title":"Task B5: another ball thrown up from a balcony",
+  "consts":[{"n":"m","v":"0.2"},{"n":"g","v":"9.8"},{"n":"Δt","v":"0.02"}],
+  "qs":[{"n":"t","s":"0","r":"t + Δt"},{"n":"ΣF","s":"","r":"−m·g"},{"n":"a","s":"","r":"ΣF / m"},
+        {"n":"v","s":"20","r":"v + a·Δt"},{"n":"y","s":"10","r":"y + a·Δt"}],
+  "runN":8,"runUnit":"time","cond":"y ≥ 0"},
+ "plots":[{"kind":"graph","x":"t","ys":["y"],"marker":true},{"kind":"graph","x":"t","ys":["v"],"marker":true}]}

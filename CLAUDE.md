@@ -14,6 +14,7 @@ An earlier version gave students fixed update rules and a force menu. It was rej
 
 - `index.html`: the whole tool. Self-contained, with no external dependencies. Vanilla JavaScript and canvas.
 - `tasks/falling-ball.json`: trial task B. It deliberately has the wrong sign on the weight (`ΣF = m·g − c·v·|v|`). Never commit the solution to this public repository.
+- `tasks/spring.json`, `damped-spring.json`, `balcony-throw.json`, `balcony-throw-2.json`, `cart.json`, `dropped-ball.json`: find-the-bug tasks B2–B7 from Matan, each with exactly one planted bug. Keep them exactly as given. Their fixes must never appear anywhere in this repository (files, comments, tests, commit messages); file names and titles must not hint at the bug. The task cards are in Matan's lesson notes.
 - `tests/smoke.py`: Playwright smoke tests. Run them before every push.
 
 ## Model semantics (the core; keep them stable)
@@ -55,7 +56,7 @@ An earlier version gave students fixed update rules and a force menu. It was rej
   - The data table shows 6 rows (`TABLE_ROWS`), then scrolls. Its height is set from the measured row height.
   - The data table only draws the rows on screen. It ignores a zero row-height measurement (the page can load hidden) and redraws via ResizeObserver. Clicking a row jumps to that step.
   - "Copy for Excel" copies tab-separated text rounded to 12 significant digits; Excel doesn't split pasted commas.
-- **Header:** model name, New, Open, Save, and an "Examples and tasks" dropdown (optgroups: Examples = spring, projectile, two masses; Tasks = Task B, loaded from `tasks/falling-ball.json` like a `?task=` link, so it needs http). "Blank" is not in the dropdown; New gives the blank model (decision). A first visit starts blank (Δt and t only, with just the Data panel and no graph); a return visit restores the saved model. Save writes `.json` as `{app:"step-by-step", version:1, model, plots, layout}`. In claude.ai it uses the `downloads` capability; elsewhere it's a normal download. Opening or loading an example over unsaved changes asks first (Save first / Replace / Cancel). Dropping a file onto the page opens it.
+- **Header:** model name, New, Open, Save, and an "Examples and tasks" dropdown (optgroups: Examples = spring, projectile, two masses; Tasks = Task B, then B2–B7, each loaded from `tasks/<name>.json` like a `?task=` link, so it needs http). "Blank" is not in the dropdown; New gives the blank model (decision). A first visit starts blank (Δt and t only, with just the Data panel and no graph); a return visit restores the saved model. Save writes `.json` as `{app:"step-by-step", version:1, model, plots, layout}`. In claude.ai it uses the `downloads` capability; elsewhere it's a normal download. Opening or loading an example over unsaved changes asks first (Save first / Replace / Cancel). Dropping a file onto the page opens it.
 - **Theme:** always light, even when the browser or OS is in dark mode (decision: Matan wants the colored theme). `color-scheme: light` keeps form controls light too. There is no dark theme. The page background is a soft lavender (`--bg: #E9E8F3`, matching the purple accent) with white cards on it.
 - localStorage keys: `stepper-v1` (current model plus the unsaved flag), `stepper-speed`, `stepper-rt`.
 

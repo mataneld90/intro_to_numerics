@@ -1,0 +1,7 @@
+{"app":"step-by-step","version":1,
+ "model":{"title":"Task B6: a cart pushed by a constant force",
+  "consts":[{"n":"m","v":"3"},{"n":"F","v":"6"},{"n":"Δt","v":"0.05"}],
+  "qs":[{"n":"t","s":"0","r":"t + Δt"},{"n":"ΣF","s":"","r":"F"},{"n":"a","s":"","r":"ΣF"},
+        {"n":"v","s":"0","r":"v + a·Δt"},{"n":"x","s":"0","r":"x + v·Δt"}],
+  "runN":4,"runUnit":"time","cond":""},
+ "plots":[{"kind":"graph","x":"t","ys":["x"],"marker":true},{"kind":"graph","x":"t","ys":["v"],"marker":true}]}

@@ -1,0 +1,7 @@
+{"app":"step-by-step","version":1,
+ "model":{"title":"Task B3: a spring with friction",
+  "consts":[{"n":"m","v":"1"},{"n":"k","v":"4"},{"n":"b","v":"0.3"},{"n":"Δt","v":"0.05"}],
+  "qs":[{"n":"t","s":"0","r":"t + Δt"},{"n":"ΣF","s":"","r":"−k·x + b·v"},{"n":"a","s":"","r":"ΣF / m"},
+        {"n":"v","s":"0","r":"v + a·Δt"},{"n":"x","s":"1","r":"x + v·Δt"},{"n":"E","s":"","r":"½·m·v² + ½·k·x²"}],
+  "runN":20,"runUnit":"time","cond":""},
+ "plots":[{"kind":"graph","x":"t","ys":["x"],"marker":true},{"kind":"graph","x":"t","ys":["E"],"marker":true}]}

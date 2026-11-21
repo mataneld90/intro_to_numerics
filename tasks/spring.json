@@ -1,0 +1,7 @@
+{"app":"step-by-step","version":1,
+ "model":{"title":"Task B2: a mass on a spring",
+  "consts":[{"n":"m","v":"1"},{"n":"k","v":"4"},{"n":"x0","v":"1"},{"n":"Δt","v":"0.05"}],
+  "qs":[{"n":"t","s":"0","r":"t + Δt"},{"n":"ΣF","s":"","r":"−k·x0"},{"n":"a","s":"","r":"ΣF / m"},
+        {"n":"v","s":"0","r":"v + a·Δt"},{"n":"x","s":"x0","r":"x + v·Δt"}],
+  "runN":10,"runUnit":"time","cond":""},
+ "plots":[{"kind":"graph","x":"t","ys":["x"],"marker":true},{"kind":"track","ys":["x"],"marker":true}]}
