@@ -73,6 +73,10 @@ body.is-dragging{user-select:none;-webkit-user-select:none;cursor:grabbing}
 .status{font-size:13px;color:var(--muted);margin-top:10px;font-variant-numeric:tabular-nums}
 .banner{background:var(--err-bg);color:var(--err);border-radius:8px;padding:8px 12px;font-size:13px;margin-top:10px}
 .banner:empty{display:none}
+.axrow{display:flex;gap:6px 16px;flex-wrap:wrap;align-items:center;font-size:13px;color:var(--muted);margin:-2px 0 8px}
+.axgrp{display:inline-flex;align-items:center;gap:5px}
+.axrow input[type=text]{width:72px;height:28px}
+.phead button.on{color:var(--accent)}
 .phead{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px;font-size:13px;color:var(--muted)}
 .sw{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:2px}
 .ser{display:inline-flex;align-items:center;gap:3px}
@@ -716,7 +720,9 @@ function cleanModel(o){
     runUnit:['time','never'].includes(src.runUnit)?src.runUnit:'steps',
     cond:str(src.cond)
   };
-  const rng=a=>Array.isArray(a)&&a.length===2&&a.every(Number.isFinite)&&a[0]<a[1]?[a[0],a[1]]:null;
+  /* an axis range is [from, to]; either end may be null (automatic) */
+  const rng=a=>{if(!Array.isArray(a)||a.length!==2)return null;const [lo,hi]=a.map(v=>v==null?null:+v);
+    if([lo,hi].some(v=>v!==null&&!Number.isFinite(v))||(lo===null&&hi===null)||(lo!==null&&hi!==null&&!(lo<hi)))return null;return [lo,hi];};
   const fixed=f=>{if(!f)return null;const x=rng(f.x),y=rng(f.y);return x||y?{x,y}:null;};
   let pl=Array.isArray(o.plots)?o.plots.filter(p=>p&&Array.isArray(p.ys)&&p.ys.length).map(p=>({kind:p.kind==='track'?'track':'graph',x:str(p.x||'t'),ys:p.ys.slice(0,4).map(str),marker:p.marker!==false,origin:p.origin===true,fixed:fixed(p.fixed)})):[];
   if(!Array.isArray(o.plots))pl=[{kind:'graph',x:'t',ys:[m.qs[m.qs.length-1]?.n||'t'],marker:true}];
@@ -946,8 +952,8 @@ function renderPlots(){
     }else{const t=document.createElement('span');t.textContent='on a line';head.append(t);}
     const sp=document.createElement('span');sp.className='sp';head.append(sp);
     const rz=mkBtn('Reset zoom','ghost','',()=>{pl.view=null;drawAll();});rz.dataset.role='rz';head.append(rz);
-    const kp=mkBtn('Keep zoom','ghost','',()=>keepZoom(pl));kp.dataset.role='keep';head.append(kp);
-    const au=mkBtn('Auto axes','ghost','',()=>{pl.fixed=null;pl.view=null;save();drawAll();});au.dataset.role='auto';head.append(au);
+    const axr=axesRow(pl);
+    const ax=mkBtn('Axes','ghost','',()=>{pl._axesOpen=!pl._axesOpen;axr.style.display=pl._axesOpen?'':'none';fillAxes(pl);});ax.dataset.role='axes';head.append(ax);
     const ml=document.createElement('label');ml.style.cssText='display:flex;align-items:center;gap:4px';
     const mc=document.createElement('input');mc.type='checkbox';mc.checked=pl.marker;mc.onchange=()=>{pl.marker=mc.checked;save();drawAll();};
     ml.append(mc,'Marker');head.append(ml);
@@ -958,7 +964,7 @@ function renderPlots(){
     head.append(mkBtn('✕','icon','Remove',()=>{if(pl===maxPlot)toggleMax(pl);plots.splice(pi,1);renderPlots();save();}));
     const cw=document.createElement('div');cw.className='cwrap';cw.style.height=(pl.kind==='graph'?250:64)+'px';
     const cv=document.createElement('canvas');cw.append(cv);
-    card.append(head,cw);
+    card.append(head,axr,cw);
     pl._cv=cv;pl._head=head;pl._card=card;
     ro.observe(cw);
     attachZoom(pl);
@@ -983,18 +989,42 @@ function addPlot(kind){
   plots.push({kind,x:pick('t'),ys:[pick('x')],marker:true,origin:false,fixed:null,view:null});
   renderPlots();save();
 }
-function unfix(pl,ax){if(!pl.fixed)return;pl.fixed[ax]=null;if(!pl.fixed.x&&!pl.fixed.y)pl.fixed=null;}
-function snapRange(r){
-  const {step}=niceTicks(r[0],r[1],10);
-  const a=Math.round(r[0]/step)*step,b=Math.round(r[1]/step)*step;
-  const c=v=>+v.toPrecision(12);
-  return b>a?[c(a),c(b)]:r.slice();
+function unfix(pl,ax){if(pl.fixed){pl.fixed[ax]=null;if(!pl.fixed.x&&!pl.fixed.y)pl.fixed=null;}fillAxes(pl);}
+/* "Axes" row: from/to fields per axis; a blank field means automatic. Stored in pl.fixed. */
+function axesRow(pl){
+  const row=document.createElement('div');row.className='axrow';row.style.display=pl._axesOpen?'':'none';
+  (pl.kind==='graph'?['x','y']:['x']).forEach(ax=>{
+    const g=document.createElement('span');g.className='axgrp';
+    const nm=document.createElement('span');nm.dataset.ax=ax;nm.className='axname';
+    const field=k=>{const i=document.createElement('input');i.type='text';i.inputMode='decimal';i.className='mono';i.placeholder='auto';i.spellcheck=false;
+      i.dataset.ax=ax;i.dataset.k=k;i.addEventListener('change',()=>setAxes(pl));i.addEventListener('keydown',e=>{if(e.key==='Enter')i.blur();});return i;};
+    g.append(nm,'from',field(0),'to',field(1));row.append(g);
+  });
+  pl._axr=row;fillAxes(pl);
+  return row;
 }
-function keepZoom(pl){
-  if(!pl.view)return;
-  pl.fixed={x:snapRange(pl.view.x),y:pl.view.y?snapRange(pl.view.y):null};
-  pl.view=null;save();drawPlot(pl);
+function fillAxes(pl){
+  const row=pl._axr;if(!row)return;
+  row.querySelectorAll('.axname').forEach(n=>n.textContent=n.dataset.ax==='x'&&pl.kind==='graph'?pl.x:pl.ys.join(', '));
+  row.querySelectorAll('input').forEach(i=>{const f=pl.fixed&&pl.fixed[i.dataset.ax],v=f&&f[+i.dataset.k];i.value=v==null?'':String(v);i.classList.remove('bad');});
+  const b=pl._head&&pl._head.querySelector('[data-role=axes]');if(b)b.classList.toggle('on',!!pl.fixed);
 }
+function setAxes(pl){
+  const fixed={x:null,y:null};let ok=true;
+  for(const ax of ['x','y']){
+    const ins=[...pl._axr.querySelectorAll(`input[data-ax=${ax}]`)];if(!ins.length)continue;
+    const vals=ins.map(i=>{const t=i.value.trim().replace(/[−–]/g,'-').replace(',','.');return t===''?null:Number(t);});
+    ins.forEach((i,k)=>i.classList.toggle('bad',vals[k]!==null&&!Number.isFinite(vals[k])));
+    if(vals.some(v=>v!==null&&!Number.isFinite(v))){ok=false;continue;}
+    if(vals[0]!==null&&vals[1]!==null&&!(vals[0]<vals[1])){ins.forEach(i=>i.classList.add('bad'));ok=false;continue;}
+    if(vals[0]!==null||vals[1]!==null)fixed[ax]=vals;
+  }
+  if(!ok)return;
+  pl.fixed=fixed.x||fixed.y?fixed:null;pl.view=null;save();drawPlot(pl);
+  const b=pl._head.querySelector('[data-role=axes]');b.classList.toggle('on',!!pl.fixed);
+}
+/* a set end replaces the automatic one; a range that comes out empty falls back to automatic */
+function withFixed(auto,f){if(!f)return auto;const r=[f[0]??auto[0],f[1]??auto[1]];return r[0]<r[1]?r:auto;}
 $('addG').onclick=()=>addPlot('graph');
 $('addT').onclick=()=>addPlot('track');
 
@@ -1035,16 +1065,14 @@ function drawPlot(pl){
   if(!W||!H)return;
   const ctx=cv.getContext('2d');ctx.setTransform(d,0,0,d,0,0);ctx.clearRect(0,0,W,H);
   const role=r=>pl._head.querySelector(`[data-role=${r}]`);
-  role('rz').style.display=role('keep').style.display=pl.view?'':'none';
-  role('auto').style.display=!pl.view&&pl.fixed?'':'none';
+  role('rz').style.display=pl.view?'':'none';
   const font='11px system-ui,sans-serif';ctx.font=font;
   const yi=pl.ys.map(colIdx);
   if(!rows.length||yi.some(i=>i<0)){ctx.fillStyle=cssv('--faint');ctx.textAlign='center';ctx.fillText(rows.length?'Choose quantities that exist in the model':'Fix the model to see results',W/2,H/2);return;}
   if(pl.kind==='track'){
     const L=12,R=12;
     let x0,x1;
-    const vx=pl.view?pl.view.x:pl.fixed&&pl.fixed.x;
-    if(vx){[x0,x1]=vx;}else{const all=[];yi.forEach(i=>rows.forEach(r=>all.push(r[i])));[x0,x1]=rangeO(all,pl.origin);}
+    if(pl.view){[x0,x1]=pl.view.x;}else{const all=[];yi.forEach(i=>rows.forEach(r=>all.push(r[i])));[x0,x1]=withFixed(rangeO(all,pl.origin),pl.fixed&&pl.fixed.x);}
     const X=v=>L+(v-x0)/(x1-x0)*(W-L-R),ym=Math.round(H/2)-6;
     const {ticks,step}=niceTicks(x0,x1,Math.max(2,Math.floor(W/90)));
     ctx.strokeStyle=cssv('--axis');ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(L,ym);ctx.lineTo(W-R,ym);ctx.stroke();
@@ -1063,14 +1091,15 @@ function drawPlot(pl){
   const xi=colIdx(pl.x);
   if(xi<0){ctx.fillStyle=cssv('--faint');ctx.textAlign='center';ctx.fillText('Choose quantities that exist in the model',W/2,H/2);return;}
   let x0,x1,y0,y1;
-  const v=pl.view||pl.fixed||{};
+  const vw=pl.view,fx=pl.fixed||{};
   const gp=prevPairs(pl);
-  if(v.x)[x0,x1]=v.x;else [x0,x1]=rangeO([...rows.map(r=>r[xi]),...(gp.length?prev.rows.map(r=>r[gp[0].px]):[])],pl.origin);
-  if(v.y)[y0,y1]=v.y;
+  if(vw)[x0,x1]=vw.x;else [x0,x1]=withFixed(rangeO([...rows.map(r=>r[xi]),...(gp.length?prev.rows.map(r=>r[gp[0].px]):[])],pl.origin),fx.x);
+  if(vw&&vw.y)[y0,y1]=vw.y;
   else{
     const vis=[];yi.forEach(i=>rows.forEach(r=>{if(r[xi]>=x0&&r[xi]<=x1)vis.push(r[i]);}));
     gp.forEach(g=>prev.rows.forEach(r=>{if(r[g.px]>=x0&&r[g.px]<=x1)vis.push(r[g.py]);}));
-    [y0,y1]=rangeO(vis.length?vis:[0],pl.origin);
+    const auto=rangeO(vis.length?vis:[0],pl.origin);
+    [y0,y1]=vw?auto:withFixed(auto,fx.y);
   }
   const yt=niceTicks(y0,y1,5);
   ctx.font=font;
