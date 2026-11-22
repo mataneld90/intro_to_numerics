@@ -721,8 +721,10 @@ function cleanModel(o){
     cond:str(src.cond)
   };
   /* an axis range is [from, to]; either end may be null (automatic) */
-  const rng=a=>{if(!Array.isArray(a)||a.length!==2)return null;const [lo,hi]=a.map(v=>v==null?null:+v);
-    if([lo,hi].some(v=>v!==null&&!Number.isFinite(v))||(lo===null&&hi===null)||(lo!==null&&hi!==null&&!(lo<hi)))return null;return [lo,hi];};
+  /* an end may also be a formula of constants, kept as text */
+  const rng=a=>{if(!Array.isArray(a)||a.length!==2)return null;
+    const [lo,hi]=a.map(v=>v==null||v===''?null:typeof v==='string'&&!Number.isFinite(+v)?v:+v);
+    if([lo,hi].some(v=>typeof v==='number'&&!Number.isFinite(v))||(lo===null&&hi===null)||(typeof lo==='number'&&typeof hi==='number'&&!(lo<hi)))return null;return [lo,hi];};
   const fixed=f=>{if(!f)return null;const x=rng(f.x),y=rng(f.y);return x||y?{x,y}:null;};
   let pl=Array.isArray(o.plots)?o.plots.filter(p=>p&&Array.isArray(p.ys)&&p.ys.length).map(p=>({kind:p.kind==='track'?'track':'graph',x:str(p.x||'t'),ys:p.ys.slice(0,4).map(str),marker:p.marker!==false,origin:p.origin===true,fixed:fixed(p.fixed)})):[];
   if(!Array.isArray(o.plots))pl=[{kind:'graph',x:'t',ys:[m.qs[m.qs.length-1]?.n||'t'],marker:true}];
@@ -997,7 +999,7 @@ function axesRow(pl){
     const g=document.createElement('span');g.className='axgrp';
     const nm=document.createElement('span');nm.dataset.ax=ax;nm.className='axname';
     const field=k=>{const i=document.createElement('input');i.type='text';i.inputMode='decimal';i.className='mono';i.placeholder='auto';i.spellcheck=false;
-      i.dataset.ax=ax;i.dataset.k=k;i.addEventListener('change',()=>setAxes(pl));i.addEventListener('keydown',e=>{if(e.key==='Enter')i.blur();});return i;};
+      i.dataset.ax=ax;i.dataset.k=k;prettyFormula(i);i.addEventListener('change',()=>setAxes(pl));i.addEventListener('keydown',e=>{if(e.key==='Enter')i.blur();});return i;};
     g.append(nm,'from',field(0),'to',field(1));row.append(g);
   });
   pl._axr=row;fillAxes(pl);
@@ -1009,22 +1011,39 @@ function fillAxes(pl){
   row.querySelectorAll('input').forEach(i=>{const f=pl.fixed&&pl.fixed[i.dataset.ax],v=f&&f[+i.dataset.k];i.value=v==null?'':String(v);i.classList.remove('bad');});
   const b=pl._head&&pl._head.querySelector('[data-role=axes]');if(b)b.classList.toggle('on',!!pl.fixed);
 }
+/* an axis end is a number, a formula of constants (kept as text, so it follows the constants), or null (automatic) */
+function axisConsts(){return ((edit||comp)||{}).C||{};}
+function parseAxisEnd(t){
+  t=t.trim();if(t==='')return {v:null};
+  const n=Number(t.replace(/[−–]/g,'-').replace(',','.'));
+  if(Number.isFinite(n))return {v:n,num:n};
+  const C=axisConsts();
+  try{
+    const ex=compileExpr(t,new Set(Object.keys(C)));const x=ex.f(C);
+    return Number.isFinite(x)?{v:t,num:x}:{err:'This comes out undefined.'};
+  }catch(e){
+    if(!(e instanceof UErr))throw e;
+    const m=/^"(.+)" isn't defined/.exec(e.message),c=edit||comp;
+    return {err:m&&c&&c.names.includes(m[1])?'Only constants can be used in axis ranges.':e.message};
+  }
+}
+function axisNum(v){if(v==null)return null;if(typeof v==='number')return v;const r=parseAxisEnd(v);return r.err?null:r.num;}
 function setAxes(pl){
   const fixed={x:null,y:null};let ok=true;
   for(const ax of ['x','y']){
     const ins=[...pl._axr.querySelectorAll(`input[data-ax=${ax}]`)];if(!ins.length)continue;
-    const vals=ins.map(i=>{const t=i.value.trim().replace(/[−–]/g,'-').replace(',','.');return t===''?null:Number(t);});
-    ins.forEach((i,k)=>i.classList.toggle('bad',vals[k]!==null&&!Number.isFinite(vals[k])));
-    if(vals.some(v=>v!==null&&!Number.isFinite(v))){ok=false;continue;}
-    if(vals[0]!==null&&vals[1]!==null&&!(vals[0]<vals[1])){ins.forEach(i=>i.classList.add('bad'));ok=false;continue;}
-    if(vals[0]!==null||vals[1]!==null)fixed[ax]=vals;
+    const ends=ins.map(i=>parseAxisEnd(i.value));
+    ins.forEach((i,k)=>{i.classList.toggle('bad',!!ends[k].err);i.title=ends[k].err||'';});
+    if(ends.some(e=>e.err)){ok=false;continue;}
+    if(ends[0].v!==null&&ends[1].v!==null&&!(ends[0].num<ends[1].num)){ins.forEach(i=>{i.classList.add('bad');i.title='"From" must be smaller than "to".';});ok=false;continue;}
+    if(ends[0].v!==null||ends[1].v!==null)fixed[ax]=ends.map(e=>e.v);
   }
   if(!ok)return;
   pl.fixed=fixed.x||fixed.y?fixed:null;pl.view=null;save();drawPlot(pl);
   const b=pl._head.querySelector('[data-role=axes]');b.classList.toggle('on',!!pl.fixed);
 }
 /* a set end replaces the automatic one; a range that comes out empty falls back to automatic */
-function withFixed(auto,f){if(!f)return auto;const r=[f[0]??auto[0],f[1]??auto[1]];return r[0]<r[1]?r:auto;}
+function withFixed(auto,f){if(!f)return auto;const r=[axisNum(f[0])??auto[0],axisNum(f[1])??auto[1]];return r[0]<r[1]?r:auto;}
 $('addG').onclick=()=>addPlot('graph');
 $('addT').onclick=()=>addPlot('track');
 
