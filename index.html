@@ -348,7 +348,7 @@ function loadExample(key){
 }
 function applyModel(m,pl,lay){
   model=m;prev=null;
-  plots=pl.map(p=>({id:'p'+(++pid),kind:p.kind,x:p.x||'t',ys:p.ys,marker:p.marker!==false,origin:!!p.origin,fixed:p.fixed||null,view:null}));
+  plots=pl.map(p=>({id:'p'+(++pid),kind:p.kind,x:p.x||'t',ys:p.ys,marker:p.marker!==false,origin:!!p.origin,equal:!!p.equal,fixed:p.fixed||null,view:null}));
   layout=layoutFromSpec(lay);
   $('title').value=model.title||'';
   dirty=false;stopNote='';follow=true;
@@ -367,7 +367,7 @@ function guard(what,action){
   const no=mkBtn('Cancel','ghost','',()=>hideNote());
   showNote([t,sv,yes,no]);
 }
-function plotSpec(){return plots.map(p=>Object.assign({kind:p.kind,x:p.x,ys:p.ys,marker:p.marker},p.origin?{origin:true}:{},p.fixed?{fixed:p.fixed}:{}));}
+function plotSpec(){return plots.map(p=>Object.assign({kind:p.kind,x:p.x,ys:p.ys,marker:p.marker},p.origin?{origin:true}:{},p.equal?{equal:true}:{},p.fixed?{fixed:p.fixed}:{}));}
 function save(){try{localStorage.setItem('stepper-v1',JSON.stringify({model,plots:plotSpec(),layout:layoutSpec(),dirty}));}catch(e){}}
 function restore(){
   try{const s=JSON.parse(localStorage.getItem('stepper-v1'));if(s&&s.model&&s.plots){const m=cleanModel(s);applyModel(m.model,m.plots,m.layout);dirty=!!s.dirty;$('example').value='custom';return true;}}catch(e){}
@@ -726,7 +726,7 @@ function cleanModel(o){
     const [lo,hi]=a.map(v=>v==null||v===''?null:typeof v==='string'&&!Number.isFinite(+v)?v:+v);
     if([lo,hi].some(v=>typeof v==='number'&&!Number.isFinite(v))||(lo===null&&hi===null)||(typeof lo==='number'&&typeof hi==='number'&&!(lo<hi)))return null;return [lo,hi];};
   const fixed=f=>{if(!f)return null;const x=rng(f.x),y=rng(f.y);return x||y?{x,y}:null;};
-  let pl=Array.isArray(o.plots)?o.plots.filter(p=>p&&Array.isArray(p.ys)&&p.ys.length).map(p=>({kind:p.kind==='track'?'track':'graph',x:str(p.x||'t'),ys:p.ys.slice(0,4).map(str),marker:p.marker!==false,origin:p.origin===true,fixed:fixed(p.fixed)})):[];
+  let pl=Array.isArray(o.plots)?o.plots.filter(p=>p&&Array.isArray(p.ys)&&p.ys.length).map(p=>({kind:p.kind==='track'?'track':'graph',x:str(p.x||'t'),ys:p.ys.slice(0,4).map(str),marker:p.marker!==false,origin:p.origin===true,equal:p.equal===true&&p.kind!=='track',fixed:fixed(p.fixed)})):[];
   if(!Array.isArray(o.plots))pl=[{kind:'graph',x:'t',ys:[m.qs[m.qs.length-1]?.n||'t'],marker:true}];
   const lay=Array.isArray(o.layout)&&o.layout.length===2&&o.layout.every(c=>Array.isArray(c))?o.layout.map(c=>c.map(str)):null;
   return {model:m,plots:pl,layout:lay};
@@ -988,7 +988,7 @@ function updatePlotSelects(){
 function addPlot(kind){
   const names=comp?comp.names:[];
   const pick=n=>names.includes(n)?n:names[names.length-1]||'';
-  plots.push({kind,x:pick('t'),ys:[pick('x')],marker:true,origin:false,fixed:null,view:null});
+  plots.push({kind,x:pick('t'),ys:[pick('x')],marker:true,origin:false,equal:false,fixed:null,view:null});
   renderPlots();save();
 }
 function unfix(pl,ax){if(pl.fixed){pl.fixed[ax]=null;if(!pl.fixed.x&&!pl.fixed.y)pl.fixed=null;}fillAxes(pl);}
@@ -1002,6 +1002,12 @@ function axesRow(pl){
       i.dataset.ax=ax;i.dataset.k=k;prettyFormula(i);i.addEventListener('change',()=>setAxes(pl));i.addEventListener('keydown',e=>{if(e.key==='Enter')i.blur();});return i;};
     g.append(nm,'from',field(0),'to',field(1));row.append(g);
   });
+  if(pl.kind==='graph'){
+    const el=document.createElement('label');el.className='axgrp';
+    const ec=document.createElement('input');ec.type='checkbox';ec.dataset.role='equal';ec.checked=pl.equal;
+    ec.onchange=()=>{pl.equal=ec.checked;save();drawPlot(pl);fillAxes(pl);};
+    el.append(ec,'Same scale on both axes');row.append(el);
+  }
   pl._axr=row;fillAxes(pl);
   return row;
 }
@@ -1009,7 +1015,7 @@ function fillAxes(pl){
   const row=pl._axr;if(!row)return;
   row.querySelectorAll('.axname').forEach(n=>n.textContent=n.dataset.ax==='x'&&pl.kind==='graph'?pl.x:pl.ys.join(', '));
   row.querySelectorAll('input').forEach(i=>{const f=pl.fixed&&pl.fixed[i.dataset.ax],v=f&&f[+i.dataset.k];i.value=v==null?'':String(v);i.classList.remove('bad');});
-  const b=pl._head&&pl._head.querySelector('[data-role=axes]');if(b)b.classList.toggle('on',!!pl.fixed);
+  const b=pl._head&&pl._head.querySelector('[data-role=axes]');if(b)b.classList.toggle('on',!!pl.fixed||pl.equal);
 }
 /* an axis end is a number, a formula of constants (kept as text, so it follows the constants), or null (automatic) */
 function axisConsts(){return ((edit||comp)||{}).C||{};}
@@ -1040,7 +1046,7 @@ function setAxes(pl){
   }
   if(!ok)return;
   pl.fixed=fixed.x||fixed.y?fixed:null;pl.view=null;save();drawPlot(pl);
-  const b=pl._head.querySelector('[data-role=axes]');b.classList.toggle('on',!!pl.fixed);
+  const b=pl._head.querySelector('[data-role=axes]');b.classList.toggle('on',!!pl.fixed||pl.equal);
 }
 /* a set end replaces the automatic one; a range that comes out empty falls back to automatic */
 function withFixed(auto,f){if(!f)return auto;const r=[axisNum(f[0])??auto[0],axisNum(f[1])??auto[1]];return r[0]<r[1]?r:auto;}
@@ -1120,8 +1126,22 @@ function drawPlot(pl){
     const auto=rangeO(vis.length?vis:[0],pl.origin);
     [y0,y1]=vw?auto:withFixed(auto,fx.y);
   }
-  const yt=niceTicks(y0,y1,5);
   ctx.font=font;
+  /* same scale: one unit is the same length on both axes. The axis with room to spare grows;
+     an end that is typed (or pinned at 0 by Origin) stays put, otherwise it grows around its middle.
+     Two passes, because the y labels' width changes the plot width. */
+  if(pl.equal){
+    const locked=(a,b,f)=>[(f&&axisNum(f[0])!=null)||(pl.origin&&a===0),(f&&axisNum(f[1])!=null)||(pl.origin&&b===0)];
+    const grow=(a,b,span,lk)=>lk[0]&&!lk[1]?[a,a+span]:lk[1]&&!lk[0]?[b-span,b]:[(a+b)/2-span/2,(a+b)/2+span/2];
+    for(let pass=0;pass<2;pass++){
+      const t=niceTicks(y0,y1,5),lw=Math.max(34,Math.max(...t.ticks.map(v=>ctx.measureText(fmtTick(v,t.step)).width))+10);
+      const pw=W-lw-10,ph=H-10-34,sx=(x1-x0)/pw,sy=(y1-y0)/ph;
+      if(!(sx>0&&sy>0))break;
+      if(sx>sy)[y0,y1]=grow(y0,y1,sx*ph,locked(y0,y1,vw?null:fx.y));
+      else if(sy>sx)[x0,x1]=grow(x0,x1,sy*pw,locked(x0,x1,vw?null:fx.x));
+    }
+  }
+  const yt=niceTicks(y0,y1,5);
   const labW=Math.max(...yt.ticks.map(t=>ctx.measureText(fmtTick(t,yt.step)).width))+10;
   const L=Math.max(34,labW),R=10,T=10,B=34;
   const X=v=>L+(v-x0)/(x1-x0)*(W-L-R),Y=v=>T+(y1-v)/(y1-y0)*(H-T-B);

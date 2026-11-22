@@ -212,6 +212,20 @@ async def main():
         await pg.select_option("#runUnit", "time"); await pg.wait_for_timeout(100)
         check("leaving never restores the value", await pg.input_value("#runN") == "10")
 
+        # same scale on both axes (projectile y against x)
+        card = await pcard(pg, 0)
+        await card.locator("button:has-text('Axes')").click()
+        await card.locator("input[data-role=equal]").check(); await pg.wait_for_timeout(100)
+        ratio = await pg.evaluate("(()=>{const m=plots[0]._map;return ((m.x1-m.x0)/(m.W-m.L-m.R))/((m.y1-m.y0)/(m.H-m.T-m.B))})()")
+        check("same scale: one unit is equally long on both axes", abs(ratio - 1) < 0.01, ratio)
+        ys = card.locator("input[data-ax=y]")
+        await ys.nth(0).fill("0"); await ys.nth(0).press("Enter"); await pg.wait_for_timeout(100)
+        m = await pg.evaluate("(()=>{const m=plots[0]._map;return [m.y0, ((m.x1-m.x0)/(m.W-m.L-m.R))/((m.y1-m.y0)/(m.H-m.T-m.B))]})()")
+        check("same scale keeps a typed end in place", m[0] == 0 and abs(m[1] - 1) < 0.01, m)
+        check("same scale is saved", await pg.evaluate("JSON.parse(localStorage.getItem('stepper-v1')).plots[0].equal===true"))
+        await ys.nth(0).fill(""); await ys.nth(0).press("Enter")
+        await card.locator("input[data-role=equal]").uncheck(); await card.locator("button:has-text('Axes')").click()
+
         # parser
         vals = await pg.evaluate("""(()=>{const k=new Set(['x','v']);const e={x:-0.5,v:-2};
           return ['|x|','2|x|','||x|−1|','√|x|','½·v²','2(x+1)'].map(s=>compileExpr(s,k).f(e))})()""")
