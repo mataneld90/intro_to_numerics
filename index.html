@@ -108,7 +108,7 @@ tbody tr[data-k]:hover td{background:var(--hover)}
 tr.pad td{padding:0;border:0}
 th{color:var(--muted);font-weight:400}
 tr.cur td{background:var(--accent-bg);color:var(--accent)}
-.tscroll{overflow:auto;max-height:178px;overscroll-behavior:contain}
+.tscroll{overflow:auto;height:193px;overscroll-behavior:contain;scrollbar-gutter:stable}
 textarea{width:100%;height:120px;font-family:ui-monospace,Menlo,monospace;font-size:12px;background:var(--panel);color:var(--text);border:1px solid var(--line2);border-radius:6px;margin-top:8px}
 </style>
 </head>
@@ -1219,7 +1219,9 @@ new ResizeObserver(setBarH).observe($('bar'));window.addEventListener('resize',s
 
 /* ---------- table, status ---------- */
 function fmt(v){if(v===0)return '0';const a=Math.abs(v);if(a>=1e5||a<1e-3)return v.toExponential(3);return String(+v.toPrecision(4));}
-let RH=25,HEAD=26,tblRaf=0;const TABLE_ROWS=6;
+let RH=25,HEAD=26,tblRaf=0,TBL_H=0;const TABLE_ROWS=6;
+/* thickness of a horizontal scrollbar on this device (0 where scrollbars overlay the content) */
+const SB_H=(()=>{const d=document.createElement('div');d.style.cssText='position:absolute;top:-999px;width:60px;height:60px;overflow:scroll';document.body.append(d);const h=d.offsetHeight-d.clientHeight;d.remove();return h;})();
 function renderTable(follow,depth=0){
   const t=$('tbl'),box=$('tscroll');
   if(!comp||!comp.ok||!rows.length){t.innerHTML='';return;}
@@ -1241,8 +1243,11 @@ function renderTable(follow,depth=0){
   const nr=r?r.getBoundingClientRect().height:RH,nh=th?th.getBoundingClientRect().height:HEAD;
   if(!(nr>4)||!(nh>4))return;
   const changed=Math.abs(nr-RH)>0.5||Math.abs(nh-HEAD)>0.5;RH=nr;HEAD=nh;
-  /* the table shows TABLE_ROWS rows, then scrolls (a horizontal scrollbar's height is added) */
-  const mh=Math.ceil(HEAD+TABLE_ROWS*RH+(box.offsetHeight-box.clientHeight))+'px';if(box.style.maxHeight!==mh)box.style.maxHeight=mh;
+  /* the table is always TABLE_ROWS rows tall plus room for a horizontal scrollbar, from step 0 on,
+     so the panel never changes height during a run (a scrollbar coming and going used to move the graphs).
+     The height is set once from the first real measurement: row heights vary by fractions of a pixel. */
+  if(!TBL_H)TBL_H=Math.ceil(HEAD+TABLE_ROWS*RH+SB_H);
+  const mh=TBL_H+'px';if(box.style.height!==mh)box.style.height=mh;
   if(changed||Math.max(RH,box.clientHeight-HEAD)!==vh)renderTable(follow,depth+1);
 }
 new ResizeObserver(()=>renderTable(false)).observe($('tscroll'));

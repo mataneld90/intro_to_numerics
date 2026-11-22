@@ -50,9 +50,17 @@ async def main():
 
         # default layout: Data at the top of the right column; the table shows 6 rows, then scrolls
         check("Data is top right", await pg.evaluate("document.getElementById('colR').firstElementChild.dataset.panel") == "data")
-        await pg.click("#bRun"); await pg.wait_for_timeout(300)
+        h0 = await pg.evaluate("document.querySelector('.card[data-panel=data]').offsetHeight")
+        await pg.evaluate("document.getElementById('speed').value=60;document.getElementById('speed').dispatchEvent(new Event('input'))")
+        await pg.click("#bRun")
+        hs = []
+        for _ in range(25):
+            await pg.wait_for_timeout(60); hs.append(await pg.evaluate("document.querySelector('.card[data-panel=data]').offsetHeight"))
+        await pg.click("#bRun"); await instant(pg); await pg.click("#bRun"); await pg.wait_for_timeout(300)
+        hs.append(await pg.evaluate("document.querySelector('.card[data-panel=data]').offsetHeight"))
+        check("Data panel keeps its height during a run", all(h == h0 for h in hs), (h0, sorted(set(hs))))
         vis = await pg.evaluate("(()=>{const b=document.getElementById('tscroll');return (b.clientHeight-HEAD)/RH})()")
-        check("table shows 6 rows", 5.8 < vis < 6.4, vis)
+        check("table shows at least 6 rows", 5.9 < vis < 7, vis)
         await pg.click("#bReset"); await pg.wait_for_timeout(100)
 
         # spring example: 20 s at dt 0.1 = 200 steps; energy never rises (friction)
